@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.box.mapper.BoxMapper">
+
+    <resultMap id="BoxResultMap" type="com.kidspoint.api.box.domain.Box">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="organizationId" column="organization_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="name" column="name"/>
+        <result property="location" column="location"/>
+        <result property="description" column="description"/>
+        <result property="qrCode" column="qr_code"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="createdBy" column="created_by" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+    </resultMap>
+
+    <resultMap id="BoxResponseResultMap" type="com.kidspoint.api.box.dto.BoxResponse">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="organizationId" column="organization_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="name" column="name"/>
+        <result property="location" column="location"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="itemCount" column="item_count"/>
+        <result property="lastUpdated" column="last_updated"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.box.domain.Box">
+        INSERT INTO boxes (id, organization_id, name, location, description, qr_code, created_at, updated_at, created_by)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{name},
+            #{location},
+            #{description},
+            #{qrCode},
+            #{createdAt},
+            #{updatedAt},
+            #{createdBy, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="BoxResultMap">
+        SELECT id, organization_id, name, location, description, qr_code, created_at, updated_at, created_by
+        FROM boxes
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="listWithStats" resultMap="BoxResponseResultMap">
+        SELECT 
+            b.id,
+            b.organization_id,
+            b.name,
+            b.location,
+            b.description,
+            b.created_at,
+            b.updated_at,
+            COUNT(i.id) as item_count,
+            GREATEST(b.updated_at, COALESCE(MAX(i.updated_at), b.updated_at)) as last_updated
+        FROM boxes b
+        LEFT JOIN items i ON b.id = i.box_id
+        WHERE b.organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        GROUP BY b.id, b.organization_id, b.name, b.location, b.description, b.created_at, b.updated_at
+        ORDER BY last_updated DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByOrganization" resultType="int">
+        SELECT COUNT(*)
+        FROM boxes
+        WHERE organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectOrganizationIdByBoxId" resultType="java.util.UUID">
+        SELECT organization_id
+        FROM boxes
+        WHERE id = #{boxId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.box.domain.Box">
+        UPDATE boxes
+        SET name = #{name},
+            location = #{location},
+            description = #{description},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM boxes
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.subscription.mapper.SubscriptionMapper">
+
+    <resultMap id="SubscriptionResultMap" type="com.kidspoint.api.subscription.domain.Subscription">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="organizationId" column="organization_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="paymentProvider" column="payment_provider"/>
+        <result property="paymentId" column="payment_id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="status" column="status" typeHandler="com.kidspoint.api.config.SubscriptionStatusTypeHandler"/>
+        <result property="currentPeriodStart" column="current_period_start"/>
+        <result property="currentPeriodEnd" column="current_period_end"/>
+        <result property="trialEnd" column="trial_end"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.subscription.domain.Subscription">
+        INSERT INTO subscriptions (
+            id, organization_id, payment_provider, payment_id, customer_id, 
+            status, current_period_start, current_period_end, trial_end, 
+            created_at, updated_at
+        )
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{paymentProvider},
+            #{paymentId},
+            #{customerId},
+            #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.SubscriptionStatusTypeHandler},
+            #{currentPeriodStart},
+            #{currentPeriodEnd},
+            #{trialEnd},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="SubscriptionResultMap">
+        SELECT id, organization_id, payment_provider, payment_id, customer_id,
+               status, current_period_start, current_period_end, trial_end,
+               created_at, updated_at
+        FROM subscriptions
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByOrganizationId" resultMap="SubscriptionResultMap">
+        SELECT id, organization_id, payment_provider, payment_id, customer_id,
+               status, current_period_start, current_period_end, trial_end,
+               created_at, updated_at
+        FROM subscriptions
+        WHERE organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.subscription.domain.Subscription">
+        UPDATE subscriptions
+        SET payment_provider = #{paymentProvider},
+            payment_id = #{paymentId},
+            customer_id = #{customerId},
+            status = #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.SubscriptionStatusTypeHandler},
+            current_period_start = #{currentPeriodStart},
+            current_period_end = #{currentPeriodEnd},
+            trial_end = #{trialEnd},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM subscriptions
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

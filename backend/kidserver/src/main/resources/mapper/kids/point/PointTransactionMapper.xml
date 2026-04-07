@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.point.mapper.PointTransactionMapper">
+
+    <resultMap id="PointTransactionResultMap" type="com.kidspoint.api.kids.point.domain.PointTransaction">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="pointAccountId" column="point_account_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="amount" column="amount"/>
+        <result property="type" column="type"/>
+        <result property="referenceType" column="reference_type"/>
+        <result property="referenceId" column="reference_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.point.domain.PointTransaction">
+        INSERT INTO point_transactions (id, point_account_id, amount, type, reference_type, reference_id, description, created_at)
+        VALUES (
+            gen_random_uuid(),
+            #{pointAccountId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{amount},
+            #{type},
+            #{referenceType},
+            #{referenceId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{description},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="selectByPointAccountId" resultMap="PointTransactionResultMap">
+        SELECT id, point_account_id, amount, type, reference_type, reference_id, description, created_at
+        FROM point_transactions
+        WHERE point_account_id = #{pointAccountId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByPointAccountIdOrderByCreatedAtDesc" resultMap="PointTransactionResultMap">
+        SELECT id, point_account_id, amount, type, reference_type, reference_id, description, created_at
+        FROM point_transactions
+        WHERE point_account_id = #{pointAccountId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+</mapper>

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.item.mapper.ItemMapper">
+
+    <resultMap id="ItemResultMap" type="com.kidspoint.api.item.domain.Item">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="boxId" column="box_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="qrCode" column="qr_code"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="createdBy" column="created_by" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="inUseByUserId" column="in_use_by_user_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="inUseAt" column="in_use_at"/>
+        <result property="deletedAt" column="deleted_at"/>
+    </resultMap>
+
+    <resultMap id="ItemResponseResultMap" type="com.kidspoint.api.item.dto.ItemResponse">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="boxId" column="box_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="boxName" column="box_name"/>
+        <result property="boxLocation" column="box_location"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="qrCode" column="qr_code"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="inUseByUserId" column="in_use_by_user_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="inUseByUserName" column="in_use_by_user_name"/>
+        <result property="inUseAt" column="in_use_at"/>
+        <result property="deletedAt" column="deleted_at"/>
+        <collection property="categories" ofType="java.lang.String" column="id" select="selectItemCategories"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.item.domain.Item">
+        INSERT INTO items (id, box_id, name, description, image_url, qr_code, created_at, updated_at, created_by, in_use_by_user_id, in_use_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{boxId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{name},
+            #{description},
+            #{imageUrl},
+            #{qrCode},
+            #{createdAt},
+            #{updatedAt},
+            #{createdBy, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{inUseByUserId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{inUseAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="ItemResultMap">
+        SELECT id, box_id, name, description, image_url, qr_code, created_at, updated_at, created_by, in_use_by_user_id, in_use_at, deleted_at
+        FROM items
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="selectByIdOrQrUuid" resultMap="ItemResultMap">
+        SELECT i.id, i.box_id, i.name, i.description, i.image_url, i.qr_code, i.created_at, i.updated_at, i.created_by, i.in_use_by_user_id, i.in_use_at, i.deleted_at
+        FROM items i
+        WHERE (i.id::text = #{idOrQrUuid} OR i.qr_code = #{idOrQrUuid})
+        LIMIT 1
+    </select>
+
+    <select id="selectPageByBoxWithJoin" resultMap="ItemResponseResultMap">
+        SELECT 
+            i.id,
+            i.box_id,
+            b.name as box_name,
+            b.location as box_location,
+            i.name,
+            i.description,
+            i.image_url,
+            i.qr_code,
+            i.created_at,
+            i.updated_at,
+            i.in_use_by_user_id,
+            u.nickname as in_use_by_user_name,
+            i.in_use_at,
+            i.deleted_at
+        FROM items i
+        LEFT JOIN boxes b ON i.box_id = b.id
+        LEFT JOIN users u ON i.in_use_by_user_id = u.id
+        WHERE i.box_id = #{boxId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY i.deleted_at IS NULL DESC, i.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectByBoxIdAndOrgId" resultMap="ItemResultMap">
+        SELECT i.id, i.box_id, i.name, i.description, i.image_url, i.qr_code, i.created_at, i.updated_at, i.created_by, i.in_use_by_user_id, i.in_use_at, i.deleted_at
+        FROM items i
+        INNER JOIN boxes b ON i.box_id = b.id
+        WHERE i.box_id = #{boxId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND b.organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND i.deleted_at IS NULL
+        LIMIT 1
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.item.domain.Item">
+        UPDATE items
+        SET name = #{name},
+            description = #{description},
+            image_url = #{imageUrl},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <update id="updateInUse">
+        UPDATE items
+        SET in_use_by_user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            in_use_at = #{inUseAt},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <update id="updateReturn">
+        UPDATE items
+        SET in_use_by_user_id = NULL,
+            in_use_at = NULL,
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <update id="updateMoveBox">
+        UPDATE items
+        SET box_id = #{newBoxId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <update id="softDelete">
+        UPDATE items
+        SET deleted_at = NOW()
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND deleted_at IS NULL
+    </update>
+
+    <update id="restore">
+        UPDATE items
+        SET deleted_at = NULL
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND deleted_at IS NOT NULL
+    </update>
+
+    <delete id="delete">
+        DELETE FROM items
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+    <!-- 카테고리 관련 쿼리 -->
+    <select id="selectItemCategories" resultType="java.lang.String">
+        SELECT c.name
+        FROM item_categories ic
+        INNER JOIN categories c ON ic.category_id = c.id
+        WHERE ic.item_id = #{itemId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <delete id="deleteItemCategories">
+        DELETE FROM item_categories
+        WHERE item_id = #{itemId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+    <select id="findOrCreateCategory" resultType="java.util.UUID">
+        WITH existing AS (
+            SELECT id FROM categories 
+            WHERE name = #{categoryName} AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+            LIMIT 1
+        ),
+        inserted AS (
+            INSERT INTO categories (id, organization_id, name, created_at)
+            SELECT gen_random_uuid(), #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}, #{categoryName}, NOW()
+            WHERE NOT EXISTS (SELECT 1 FROM existing)
+            RETURNING id
+        )
+        SELECT id FROM existing
+        UNION ALL
+        SELECT id FROM inserted
+    </select>
+
+    <insert id="insertItemCategory">
+        INSERT INTO item_categories (item_id, category_id)
+        VALUES (
+            #{itemId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{categoryId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        )
+        ON CONFLICT (item_id, category_id) DO NOTHING
+    </insert>
+
+    <select id="countByCreatedBy" resultType="int">
+        SELECT COUNT(*)
+        FROM items
+        WHERE created_by = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND deleted_at IS NULL
+    </select>
+
+</mapper>

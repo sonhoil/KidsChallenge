@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.family.mapper.FamilyMapper">
+
+    <resultMap id="FamilyResultMap" type="com.kidspoint.api.kids.family.domain.Family">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="name" column="name"/>
+        <result property="inviteCode" column="invite_code"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.family.domain.Family">
+        INSERT INTO families (id, name, invite_code, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{name},
+            #{inviteCode},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="FamilyResultMap">
+        SELECT id, name, invite_code, created_at, updated_at
+        FROM families
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByInviteCode" resultMap="FamilyResultMap">
+        SELECT id, name, invite_code, created_at, updated_at
+        FROM families
+        WHERE invite_code = #{inviteCode}
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.family.domain.Family">
+        UPDATE families
+        SET name = #{name},
+            invite_code = #{inviteCode},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM families
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

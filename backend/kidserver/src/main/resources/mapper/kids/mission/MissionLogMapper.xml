@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.mission.mapper.MissionLogMapper">
+
+    <resultMap id="MissionLogResultMap" type="com.kidspoint.api.kids.mission.domain.MissionLog">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="missionAssignmentId" column="mission_assignment_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="fromStatus" column="from_status" typeHandler="com.kidspoint.api.config.MissionStatusTypeHandler"/>
+        <result property="toStatus" column="to_status" typeHandler="com.kidspoint.api.config.MissionStatusTypeHandler"/>
+        <result property="changedBy" column="changed_by" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="comment" column="comment"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.mission.domain.MissionLog">
+        INSERT INTO mission_logs (id, mission_assignment_id, from_status, to_status, changed_by, comment, created_at)
+        VALUES (
+            gen_random_uuid(),
+            #{missionAssignmentId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{fromStatus, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.MissionStatusTypeHandler},
+            #{toStatus, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.MissionStatusTypeHandler},
+            #{changedBy, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{comment},
+            #{createdAt}
+        )
+    </insert>
+
+    <select id="selectByMissionAssignmentId" resultMap="MissionLogResultMap">
+        SELECT id, mission_assignment_id, from_status, to_status, changed_by, comment, created_at
+        FROM mission_logs
+        WHERE mission_assignment_id = #{missionAssignmentId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>

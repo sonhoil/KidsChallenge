@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.point.mapper.PointAccountMapper">
+
+    <resultMap id="PointAccountResultMap" type="com.kidspoint.api.kids.point.domain.PointAccount">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="familyId" column="family_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="userId" column="user_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="balance" column="balance"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.point.domain.PointAccount">
+        INSERT INTO point_accounts (id, family_id, user_id, balance, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{balance},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="PointAccountResultMap">
+        SELECT id, family_id, user_id, balance, created_at, updated_at
+        FROM point_accounts
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByFamilyAndUser" resultMap="PointAccountResultMap">
+        SELECT id, family_id, user_id, balance, created_at, updated_at
+        FROM point_accounts
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.point.domain.PointAccount">
+        UPDATE point_accounts
+        SET balance = #{balance},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+</mapper>

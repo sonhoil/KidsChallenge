@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.auth.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.kidspoint.api.auth.domain.User">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="username" column="username"/>
+        <result property="passwordHash" column="password"/>
+        <result property="email" column="email"/>
+        <result property="nickname" column="nickname"/>
+        <result property="authType" column="auth_type"/>
+        <result property="socialId" column="social_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="UserResultMap">
+        SELECT id, username, password, email, nickname, auth_type, social_id, created_at, updated_at
+        FROM users
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByUsername" resultMap="UserResultMap">
+        SELECT id, username, password, email, nickname, auth_type, social_id, created_at, updated_at
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectByEmail" resultMap="UserResultMap">
+        SELECT id, username, password, email, nickname, auth_type, social_id, created_at, updated_at
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <select id="selectByAuthTypeAndSocialId" resultMap="UserResultMap">
+        SELECT id, username, password, email, nickname, auth_type, social_id, created_at, updated_at
+        FROM users
+        WHERE auth_type = #{authType} AND social_id = #{socialId}
+    </select>
+
+    <insert id="insert" parameterType="com.kidspoint.api.auth.domain.User">
+        INSERT INTO users (id, username, password, email, nickname, auth_type, social_id, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{username},
+            #{passwordHash},
+            #{email},
+            #{nickname},
+            #{authType, jdbcType=VARCHAR},
+            #{socialId, jdbcType=VARCHAR},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.kidspoint.api.auth.domain.User">
+        UPDATE users
+        SET username = #{username},
+            password = #{passwordHash},
+            email = #{email},
+            nickname = #{nickname},
+            auth_type = #{authType, jdbcType=VARCHAR},
+            social_id = #{socialId, jdbcType=VARCHAR},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM users
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

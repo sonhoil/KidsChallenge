@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.mission.mapper.MissionAssignmentMapper">
+
+    <resultMap id="MissionAssignmentResultMap" type="com.kidspoint.api.kids.mission.domain.MissionAssignment">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="missionId" column="mission_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="assigneeId" column="assignee_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="assignedBy" column="assigned_by" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="familyId" column="family_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="dueDate" column="due_date"/>
+        <result property="status" column="status" typeHandler="com.kidspoint.api.config.MissionStatusTypeHandler"/>
+        <result property="points" column="points"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.mission.domain.MissionAssignment">
+        INSERT INTO mission_assignments (id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{missionId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{assignedBy, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{dueDate},
+            #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.MissionStatusTypeHandler},
+            #{points},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByAssigneeId" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByFamilyIdAndAssigneeId" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY updated_at DESC, created_at DESC
+    </select>
+
+    <select id="selectByAssigneeIdAndStatus" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND status = #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.MissionStatusTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectPendingByFamilyId" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND status = 'pending'
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByFamilyId" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByAssigneeIdAndDueDate" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND (due_date = #{dueDate} OR due_date IS NULL)
+          AND status IN ('todo', 'pending')
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.mission.domain.MissionAssignment">
+        UPDATE mission_assignments
+        SET status = #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.MissionStatusTypeHandler},
+            points = #{points},
+            due_date = #{dueDate},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM mission_assignments
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+    <select id="countByMissionAssigneeAndDueDate" resultType="int">
+        SELECT COUNT(1)
+        FROM mission_assignments
+        WHERE mission_id = #{missionId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND due_date = #{dueDate}
+          AND status IN ('todo', 'pending', 'approved', 'rejected')
+    </select>
+
+    <select id="countByMissionAssigneeBetweenDates" resultType="int">
+        SELECT COUNT(1)
+        FROM mission_assignments
+        WHERE mission_id = #{missionId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND due_date BETWEEN #{startDate} AND #{endDate}
+          AND status IN ('todo', 'pending', 'approved', 'rejected')
+    </select>
+
+    <select id="selectApprovedByAssigneeAndDate" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND (due_date = #{dueDate} OR due_date IS NULL)
+          AND status = 'approved'
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectApprovedByAssigneeBetweenDates" resultMap="MissionAssignmentResultMap">
+        SELECT id, mission_id, assignee_id, assigned_by, family_id, due_date, status, points, created_at, updated_at
+        FROM mission_assignments
+        WHERE assignee_id = #{assigneeId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND (
+              (due_date BETWEEN #{startDate} AND #{endDate})
+              OR (due_date IS NULL AND DATE(updated_at) BETWEEN #{startDate} AND #{endDate})
+          )
+          AND status = 'approved'
+        ORDER BY updated_at DESC
+    </select>
+
+</mapper>

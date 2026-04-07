@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.reward.mapper.RewardMapper">
+
+    <resultMap id="RewardResultMap" type="com.kidspoint.api.kids.reward.domain.Reward">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="familyId" column="family_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="pricePoints" column="price_points"/>
+        <result property="category" column="category"/>
+        <result property="iconType" column="icon_type"/>
+        <result property="isActive" column="is_active"/>
+        <result property="createdBy" column="created_by" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.reward.domain.Reward">
+        INSERT INTO rewards (id, family_id, title, description, price_points, category, icon_type, is_active, created_by, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{title},
+            #{description},
+            #{pricePoints},
+            #{category},
+            #{iconType},
+            #{isActive},
+            #{createdBy, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="RewardResultMap">
+        SELECT id, family_id, title, description, price_points, category, icon_type, is_active, created_by, created_at, updated_at
+        FROM rewards
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByFamilyId" resultMap="RewardResultMap">
+        SELECT id, family_id, title, description, price_points, category, icon_type, is_active, created_by, created_at, updated_at
+        FROM rewards
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectActiveByFamilyId" resultMap="RewardResultMap">
+        SELECT id, family_id, title, description, price_points, category, icon_type, is_active, created_by, created_at, updated_at
+        FROM rewards
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND is_active = TRUE
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.reward.domain.Reward">
+        UPDATE rewards
+        SET title = #{title},
+            description = #{description},
+            price_points = #{pricePoints},
+            category = #{category},
+            icon_type = #{iconType},
+            is_active = #{isActive},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM rewards
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

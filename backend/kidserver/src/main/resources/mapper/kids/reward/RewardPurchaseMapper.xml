@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.reward.mapper.RewardPurchaseMapper">
+
+    <resultMap id="RewardPurchaseResultMap" type="com.kidspoint.api.kids.reward.domain.RewardPurchase">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="rewardId" column="reward_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="buyerId" column="buyer_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="familyId" column="family_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="pointTransactionId" column="point_transaction_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="status" column="status" typeHandler="com.kidspoint.api.config.RewardPurchaseStatusTypeHandler"/>
+        <result property="notes" column="notes"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.reward.domain.RewardPurchase">
+        INSERT INTO reward_purchases (id, reward_id, buyer_id, family_id, point_transaction_id, status, notes, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{rewardId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{buyerId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{pointTransactionId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.RewardPurchaseStatusTypeHandler},
+            #{notes},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="RewardPurchaseResultMap">
+        SELECT id, reward_id, buyer_id, family_id, point_transaction_id, status, notes, created_at, updated_at
+        FROM reward_purchases
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByBuyerId" resultMap="RewardPurchaseResultMap">
+        SELECT id, reward_id, buyer_id, family_id, point_transaction_id, status, notes, created_at, updated_at
+        FROM reward_purchases
+        WHERE buyer_id = #{buyerId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByBuyerIdAndStatus" resultMap="RewardPurchaseResultMap">
+        SELECT id, reward_id, buyer_id, family_id, point_transaction_id, status, notes, created_at, updated_at
+        FROM reward_purchases
+        WHERE buyer_id = #{buyerId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND status = #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.RewardPurchaseStatusTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByFamilyId" resultMap="RewardPurchaseResultMap">
+        SELECT id, reward_id, buyer_id, family_id, point_transaction_id, status, notes, created_at, updated_at
+        FROM reward_purchases
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.reward.domain.RewardPurchase">
+        UPDATE reward_purchases
+        SET status = #{status, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.RewardPurchaseStatusTypeHandler},
+            notes = #{notes},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+</mapper>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.organization.mapper.OrganizationMemberMapper">
+
+    <resultMap id="OrganizationMemberResultMap" type="com.kidspoint.api.organization.domain.OrganizationMember">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="organizationId" column="organization_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="userId" column="user_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="role" column="role" typeHandler="com.kidspoint.api.config.UserRoleTypeHandler"/>
+        <result property="isFavorite" column="is_favorite"/>
+        <result property="joinedAt" column="joined_at"/>
+        <result property="lastActive" column="last_active"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.organization.domain.OrganizationMember">
+        INSERT INTO organization_members (id, organization_id, user_id, role, is_favorite, joined_at, last_active)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{role, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UserRoleTypeHandler},
+            #{isFavorite},
+            #{joinedAt},
+            #{lastActive}
+        )
+    </insert>
+
+    <select id="selectByUserAndOrg" resultMap="OrganizationMemberResultMap">
+        SELECT id, organization_id, user_id, role, is_favorite, joined_at, last_active
+        FROM organization_members
+        WHERE user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectRoleByUserAndOrg" resultType="com.kidspoint.api.organization.domain.OrganizationMember$OrgRole">
+        SELECT role
+        FROM organization_members
+        WHERE user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByOrganizationId" resultMap="OrganizationMemberResultMap">
+        SELECT id, organization_id, user_id, role, is_favorite, joined_at, last_active
+        FROM organization_members
+        WHERE organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY joined_at ASC
+    </select>
+
+    <select id="selectById" resultMap="OrganizationMemberResultMap">
+        SELECT id, organization_id, user_id, role, is_favorite, joined_at, last_active
+        FROM organization_members
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.organization.domain.OrganizationMember">
+        UPDATE organization_members
+            SET role = #{role, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UserRoleTypeHandler},
+            is_favorite = #{isFavorite},
+            last_active = #{lastActive}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <update id="updateLastActiveByUserId">
+        UPDATE organization_members
+        SET last_active = #{lastActive}
+        WHERE user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <update id="updateLastActiveByUserAndOrg">
+        UPDATE organization_members
+        SET last_active = #{lastActive}
+        WHERE user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND organization_id = #{organizationId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM organization_members
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

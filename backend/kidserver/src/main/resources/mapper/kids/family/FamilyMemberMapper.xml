@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.family.mapper.FamilyMemberMapper">
+
+    <resultMap id="FamilyMemberResultMap" type="com.kidspoint.api.kids.family.domain.FamilyMember">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="familyId" column="family_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="userId" column="user_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="role" column="role" typeHandler="com.kidspoint.api.config.FamilyRoleTypeHandler"/>
+        <result property="nickname" column="nickname"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.family.domain.FamilyMember">
+        INSERT INTO family_members (id, family_id, user_id, role, nickname, avatar_url, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{role, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.FamilyRoleTypeHandler},
+            #{nickname},
+            #{avatarUrl},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="FamilyMemberResultMap">
+        SELECT id, family_id, user_id, role, nickname, avatar_url, created_at, updated_at
+        FROM family_members
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByFamilyAndUser" resultMap="FamilyMemberResultMap">
+        SELECT id, family_id, user_id, role, nickname, avatar_url, created_at, updated_at
+        FROM family_members
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByFamilyId" resultMap="FamilyMemberResultMap">
+        SELECT id, family_id, user_id, role, nickname, avatar_url, created_at, updated_at
+        FROM family_members
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectByUserId" resultMap="FamilyMemberResultMap">
+        SELECT id, family_id, user_id, role, nickname, avatar_url, created_at, updated_at
+        FROM family_members
+        WHERE user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at ASC
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.family.domain.FamilyMember">
+        UPDATE family_members
+        SET user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            role = #{role, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.FamilyRoleTypeHandler},
+            nickname = #{nickname},
+            avatar_url = #{avatarUrl},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM family_members
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+    <delete id="deleteByFamilyAndUser">
+        DELETE FROM family_members
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

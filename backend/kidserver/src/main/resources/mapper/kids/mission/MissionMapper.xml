@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.kids.mission.mapper.MissionMapper">
+
+    <resultMap id="MissionResultMap" type="com.kidspoint.api.kids.mission.domain.Mission">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="familyId" column="family_id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="defaultPoints" column="default_points"/>
+        <result property="iconType" column="icon_type"/>
+        <result property="isActive" column="is_active"/>
+        <result property="createdBy" column="created_by" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.kids.mission.domain.Mission">
+        INSERT INTO missions (id, family_id, title, description, default_points, icon_type, is_active, created_by, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{title},
+            #{description},
+            #{defaultPoints},
+            #{iconType},
+            #{isActive},
+            #{createdBy, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="MissionResultMap">
+        SELECT id, family_id, title, description, default_points, icon_type, is_active, created_by, created_at, updated_at
+        FROM missions
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByFamilyId" resultMap="MissionResultMap">
+        SELECT id, family_id, title, description, default_points, icon_type, is_active, created_by, created_at, updated_at
+        FROM missions
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectActiveByFamilyId" resultMap="MissionResultMap">
+        SELECT id, family_id, title, description, default_points, icon_type, is_active, created_by, created_at, updated_at
+        FROM missions
+        WHERE family_id = #{familyId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+          AND is_active = TRUE
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.kids.mission.domain.Mission">
+        UPDATE missions
+        SET title = #{title},
+            description = #{description},
+            default_points = #{defaultPoints},
+            icon_type = #{iconType},
+            is_active = #{isActive},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM missions
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>

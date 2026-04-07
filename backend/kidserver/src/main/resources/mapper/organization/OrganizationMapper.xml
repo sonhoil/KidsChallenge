@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.organization.mapper.OrganizationMapper">
+
+    <resultMap id="OrganizationResultMap" type="com.kidspoint.api.organization.domain.Organization">
+        <id property="id" column="id" jdbcType="OTHER" typeHandler="com.kidspoint.api.config.UUIDTypeHandler"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="plan" column="plan" typeHandler="com.kidspoint.api.config.OrganizationPlanTypeHandler"/>
+        <result property="boxLimit" column="box_limit"/>
+        <result property="allowPublicJoin" column="allow_public_join"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.kidspoint.api.organization.domain.Organization">
+        INSERT INTO organizations (id, name, description, plan, box_limit, allow_public_join, created_at, updated_at)
+        VALUES (
+            #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{name},
+            #{description},
+            #{plan, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.OrganizationPlanTypeHandler},
+            #{boxLimit},
+            #{allowPublicJoin},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectById" resultMap="OrganizationResultMap">
+        SELECT id, name, description, plan, box_limit, allow_public_join, created_at, updated_at
+        FROM organizations
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectByUserId" resultMap="OrganizationResultMap">
+        SELECT o.id, o.name, o.description, o.plan, o.box_limit, o.allow_public_join, o.created_at, o.updated_at
+        FROM organizations o
+        INNER JOIN organization_members om ON o.id = om.organization_id
+        WHERE om.user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+        ORDER BY o.created_at DESC
+    </select>
+
+    <update id="update" parameterType="com.kidspoint.api.organization.domain.Organization">
+        UPDATE organizations
+        SET name = #{name},
+            description = #{description},
+            plan = #{plan, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.OrganizationPlanTypeHandler},
+            box_limit = #{boxLimit},
+            allow_public_join = #{allowPublicJoin},
+            updated_at = #{updatedAt}
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM organizations
+        WHERE id = #{id, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </delete>
+
+</mapper>
