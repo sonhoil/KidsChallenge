@@ -5,15 +5,15 @@ COPY pom.xml ./
 COPY src ./src
 
 RUN mvn -B -DskipTests clean package
-RUN cp "$(ls target/*.jar | grep -v '\.original$' | head -n 1)" /app/app.jar
+RUN cp "$(ls target/*.war | grep -v '\.original$' | head -n 1)" /app/app.war
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-COPY --from=builder /app/app.jar /app/app.jar
+COPY --from=builder /app/app.war /app/app.war
 
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "-c", "java -Dserver.port=${PORT} -jar /app/app.jar"]
+CMD ["sh", "-c", "java -Dserver.port=${PORT} -jar /app/app.war"]
 
