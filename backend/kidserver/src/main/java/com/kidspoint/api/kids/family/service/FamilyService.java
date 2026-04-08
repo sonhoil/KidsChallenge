@@ -312,7 +312,17 @@ public class FamilyService {
         response.setFamilyId(member.getFamilyId());
         response.setUserId(member.getUserId());
         response.setRole(member.getRole().name());
-        response.setNickname(member.getNickname());
+        // 표시 닉네임 우선순위:
+        // 1) 연결된 사용자(users.nickname, 설정 변경 반영)
+        // 2) 가족 멤버 별칭(family_members.nickname)
+        String displayNickname = member.getNickname();
+        if (member.getUserId() != null) {
+            User linkedUser = userMapper.selectById(member.getUserId());
+            if (linkedUser != null && linkedUser.getNickname() != null && !linkedUser.getNickname().isBlank()) {
+                displayNickname = linkedUser.getNickname();
+            }
+        }
+        response.setNickname(displayNickname);
         response.setAvatarUrl(member.getAvatarUrl());
         response.setCreatedAt(member.getCreatedAt());
         response.setUpdatedAt(member.getUpdatedAt());

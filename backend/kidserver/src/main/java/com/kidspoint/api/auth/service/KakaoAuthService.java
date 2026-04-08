@@ -120,12 +120,21 @@ public class KakaoAuthService {
             String email = kakaoUserInfo.getKakaoAccount() != null 
                 ? kakaoUserInfo.getKakaoAccount().getEmail() 
                 : null;
-            String nickname = kakaoUserInfo.getKakaoAccount() != null 
-                && kakaoUserInfo.getKakaoAccount().getProfile() != null
-                ? kakaoUserInfo.getKakaoAccount().getProfile().getNickname()
-                : (kakaoUserInfo.getProperties() != null 
-                    ? kakaoUserInfo.getProperties().getNickname() 
-                    : "카카오사용자");
+            String nickname = null;
+            if (kakaoUserInfo.getKakaoAccount() != null
+                && kakaoUserInfo.getKakaoAccount().getProfile() != null) {
+                nickname = kakaoUserInfo.getKakaoAccount().getProfile().getNickname();
+            }
+            // profile 닉네임이 비어있으면 properties 닉네임으로 폴백
+            if (nickname == null || nickname.trim().isEmpty()) {
+                if (kakaoUserInfo.getProperties() != null) {
+                    nickname = kakaoUserInfo.getProperties().getNickname();
+                }
+            }
+            // 최종 폴백
+            if (nickname == null || nickname.trim().isEmpty()) {
+                nickname = "카카오사용자";
+            }
 
             // 카카오 ID로 사용자 찾기 (auth_type='kakao' AND social_id=카카오ID)
             User user = userMapper.selectByAuthTypeAndSocialId("kakao", kakaoNumericId);
