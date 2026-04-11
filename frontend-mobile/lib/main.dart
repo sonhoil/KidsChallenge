@@ -61,6 +61,9 @@ final _routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
     redirect: (context, state) {
+      if (authState.bootstrapping) {
+        return null;
+      }
       final isLoggedIn = authState.isAuthenticated;
       final isLoginPage = state.uri.path == '/login';
       final isCreateFamilyPage = state.uri.path == '/create-family';

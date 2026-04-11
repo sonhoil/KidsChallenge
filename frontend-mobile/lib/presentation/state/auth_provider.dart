@@ -31,11 +31,14 @@ class AuthState {
   final UserModel? user;
   final bool isLoading;
   final String? error;
+  /// 앱 cold start 시 SharedPreferences 기반 세션 복원이 끝날 때까지 true
+  final bool bootstrapping;
 
   AuthState({
     this.user,
     this.isLoading = false,
     this.error,
+    this.bootstrapping = false,
   });
 
   bool get isAuthenticated => user != null;
@@ -44,11 +47,13 @@ class AuthState {
     UserModel? user,
     bool? isLoading,
     String? error,
+    bool? bootstrapping,
   }) {
     return AuthState(
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      bootstrapping: bootstrapping ?? this.bootstrapping,
     );
   }
 }
@@ -58,7 +63,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
   static const bool _autoTestLogin = false; // 테스트용 자동 로그인 비활성화
 
-  AuthNotifier(this._authRepository, this._ref) : super(AuthState()) {
+  AuthNotifier(this._authRepository, this._ref) : super(AuthState(bootstrapping: true)) {
     if (_autoTestLogin) {
       _testLogin();
     } else {
@@ -91,7 +96,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString('user_id', user.id);
       await prefs.setString('auth_token', user.id);
       print('[Auth] Current user loaded: ${user.nickname}');
-      state = state.copyWith(user: user);
+      state = state.copyWith(user: user, bootstrapping: false);
       _ref.invalidate(myFamiliesProvider);
       await _initializeFamily(null);
     } catch (e) {
@@ -101,7 +106,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.remove('auth_token');
       await prefs.remove('session_id');
       // 로그인 안 된 상태
-      state = AuthState();
+      state = AuthState(bootstrapping: false);
     }
   }
 
@@ -116,14 +121,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.login(username, password);
       await prefs.setString('user_id', user.id);
       await prefs.setString('auth_token', user.id);
-      state = state.copyWith(user: user, isLoading: false);
+      state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
       
       // 로그인 후 초기화: 가족 설정
       await _initializeFamily(inviteCode, memberId: memberId);
       
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: e.toString(), bootstrapping: false);
       return false;
     }
   }
@@ -174,7 +179,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // 카카오 로그인 수행
       final accessToken = await _performKakaoLogin();
       if (accessToken == null) {
-        state = state.copyWith(isLoading: false, error: '카카오 로그인이 취소되었습니다.');
+        state = state.copyWith(isLoading: false, error: '카카오 로그인이 취소되었습니다.', bootstrapping: false);
         return false;
       }
 
@@ -183,14 +188,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString('user_id', user.id);
       // Bearer 토큰으로도 사용할 수 있도록 auth_token 저장 (UUID 문자열)
       await prefs.setString('auth_token', user.id);
-      state = state.copyWith(user: user, isLoading: false);
+      state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
       
       // 로그인 후 초기화: 가족 설정
       await _initializeFamily(inviteCode, memberId: memberId);
       
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: e.toString(), bootstrapping: false);
       return false;
     }
   }
@@ -206,7 +211,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // 구글 로그인 수행
       final accessToken = await _performGoogleLogin();
       if (accessToken == null) {
-        state = state.copyWith(isLoading: false, error: '구글 로그인이 취소되었습니다.');
+        state = state.copyWith(isLoading: false, error: '구글 로그인이 취소되었습니다.', bootstrapping: false);
         return false;
       }
 
@@ -215,14 +220,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.setString('user_id', user.id);
       // Bearer 토큰으로도 사용할 수 있도록 auth_token 저장 (UUID 문자열)
       await prefs.setString('auth_token', user.id);
-      state = state.copyWith(user: user, isLoading: false);
+      state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
       
       // 로그인 후 초기화: 가족 설정
       await _initializeFamily(inviteCode, memberId: memberId);
       
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: e.toString(), bootstrapping: false);
       return false;
     }
   }

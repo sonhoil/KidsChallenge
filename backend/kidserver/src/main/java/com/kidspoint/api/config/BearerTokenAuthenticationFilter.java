@@ -52,14 +52,10 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         
-        // 세션이 있는 경우도 건너뛰기 (세션 기반 인증 사용)
-        jakarta.servlet.http.HttpSession session = request.getSession(false);
-        if (session != null) {
-            logger.debug("[BearerTokenFilter] Session exists: {}", session.getId());
-            // 세션이 있으면 Spring Security가 자동으로 인증을 처리하도록 함
-            filterChain.doFilter(request, response);
-            return;
-        }
+        // 주의: HttpSession 이 존재한다고 해서 여기서 return 하면 안 됨.
+        // 만료·무효한 SESSION 쿠키로 세션 객체가 남아 있어도 SecurityContext 가 비어 있을 수 있으며,
+        // 이 경우 Authorization: Bearer(저장된 사용자 UUID)가 무시되어 모바일 앱 재실행 시 /me 가 401이 된다.
+        // 유효한 서버 세션이 있으면 SecurityContextHolderFilter 가 이미 인증을 채웠으므로 위 분기에서 처리된다.
         
         String authHeader = request.getHeader("Authorization");
         logger.debug("[BearerTokenFilter] Authorization header: {}", authHeader != null ? "present" : "absent");
