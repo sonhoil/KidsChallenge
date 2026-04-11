@@ -52,6 +52,10 @@ class _ParentMissionRequestsScreenState
         onRefresh: () async {
           ref.invalidate(familyAssignmentsProvider(family.id));
           ref.invalidate(pendingMissionsProvider(family.id));
+          await Future.wait([
+            ref.read(familyAssignmentsProvider(family.id).future),
+            ref.read(pendingMissionsProvider(family.id).future),
+          ]);
         },
         child: assignmentsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

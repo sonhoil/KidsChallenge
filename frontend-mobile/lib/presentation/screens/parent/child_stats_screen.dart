@@ -59,10 +59,17 @@ class ChildStatsScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           if (family != null && userId != null) {
-            ref.invalidate(familyUserMissionsProvider((familyId: family.id, userId: userId)));
-            ref.invalidate(memberPointBalanceProvider((familyId: family.id, userId: userId)));
-            ref.invalidate(purchasesByUserProvider((familyId: family.id, userId: userId)));
+            final q = (familyId: family.id, userId: userId);
+            ref.invalidate(familyUserMissionsProvider(q));
+            ref.invalidate(memberPointBalanceProvider(q));
+            ref.invalidate(purchasesByUserProvider(q));
             ref.invalidate(familyPurchasesProvider(family.id));
+            await Future.wait([
+              ref.read(familyUserMissionsProvider(q).future),
+              ref.read(memberPointBalanceProvider(q).future),
+              ref.read(purchasesByUserProvider(q).future),
+              ref.read(familyPurchasesProvider(family.id).future),
+            ]);
           }
         },
         child: SingleChildScrollView(

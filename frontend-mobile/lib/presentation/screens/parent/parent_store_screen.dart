@@ -32,6 +32,10 @@ class ParentStoreScreen extends ConsumerWidget {
               onRefresh: () async {
                 ref.invalidate(allRewardsProvider(family.id));
                 ref.invalidate(rewardsProvider(family.id));
+                await Future.wait([
+                  ref.read(allRewardsProvider(family.id).future),
+                  ref.read(rewardsProvider(family.id).future),
+                ]);
               },
               child: rewardsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),

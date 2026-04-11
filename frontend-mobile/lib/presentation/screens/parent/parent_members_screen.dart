@@ -32,7 +32,13 @@ class ParentMembersScreen extends ConsumerWidget {
           _buildHeader(context),
           Expanded(
             child: membersAsync.when(
-              data: (members) => _buildMemberList(context, members, ref),
+              data: (members) => RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(familyMembersProvider(family.id));
+                  await ref.read(familyMembersProvider(family.id).future);
+                },
+                child: _buildMemberList(context, members, ref),
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Text(
@@ -61,6 +67,7 @@ class ParentMembersScreen extends ConsumerWidget {
 
   Widget _buildMemberList(BuildContext context, List<FamilyMemberModel> members, WidgetRef ref) {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -257,9 +264,16 @@ class ParentMembersScreen extends ConsumerWidget {
                     _confirmAndDeleteMember(context, ref, member);
                   } else if (value == 'invite') {
                     _copyInviteLink(context, ref, member);
+                  } else if (value == 'rename') {
+                    _showEditChildNicknameDialog(context, ref, member);
                   }
                 },
                 itemBuilder: (ctx) => [
+                  if (member.role == 'child')
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Text('이름 수정'),
+                    ),
                   if (member.role == 'child' && member.userId == null)
                     const PopupMenuItem(
                       value: 'invite',
@@ -416,6 +430,79 @@ class ParentMembersScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showEditChildNicknameDialog(
+    BuildContext context,
+    WidgetRef ref,
+    FamilyMemberModel member,
+  ) async {
+    final family = ref.read(currentFamilyProvider);
+    if (family == null) return;
+
+    final controller = TextEditingController(
+      text: (member.nickname != null && member.nickname!.trim().isNotEmpty)
+          ? member.nickname!.trim()
+          : '',
+    );
+    try {
+      final saved = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('아이 이름'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '가족에서 부를 이름',
+              hintText: '예: 민수',
+            ),
+            autofocus: true,
+            maxLength: 40,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () {
+                final t = controller.text.trim();
+                if (t.isEmpty) return;
+                Navigator.of(ctx).pop(t);
+              },
+              child: const Text('저장'),
+            ),
+          ],
+        ),
+      );
+
+      if (saved == null || saved.isEmpty) return;
+
+      final repo = ref.read(familyRepositoryProvider);
+      await repo.updateMemberNickname(family.id, member.id, saved);
+      ref.invalidate(familyMembersProvider(family.id));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('이름이 저장되었습니다.'),
+          backgroundColor: AppTheme.emerald500,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(left: 16, right: 16, bottom: 88),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('이름 저장에 실패했습니다: $e'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 88),
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<void> _copyInviteLink(

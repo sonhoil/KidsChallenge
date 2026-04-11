@@ -55,6 +55,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ref.invalidate(familyMembersProvider(family.id));
                   ref.invalidate(pointBalanceProvider(family.id));
                 }
+                await Future.wait([
+                  ref.read(myMissionsProvider.future),
+                  ref.read(myPurchasesProvider.future),
+                  if (family != null) ...[
+                    ref.read(familyMembersProvider(family.id).future),
+                    ref.read(pointBalanceProvider(family.id).future),
+                  ],
+                ]);
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),

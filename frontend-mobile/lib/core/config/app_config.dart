@@ -14,6 +14,13 @@ class AppConfig {
   static const String authMe = '/auth/me';
   static const String authKakaoToken = '/auth/kakao/token';
   static const String authGoogleToken = '/auth/google/token';
+
+  /// Google Sign-In **iOS** 전용 클라이언트 ID (`xxx.apps.googleusercontent.com`).
+  /// [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth 2.0 클라이언트 ID →
+  /// **앱 유형: iOS**, 번들 ID: `com.kidspoint.kidsChallenge` 로 생성 후 복사.
+  /// Android는 이 값을 쓰지 않으며, iOS에서는 `ios/Runner/Info.plist`의 Google URL 스킴(REVERSED_CLIENT_ID)도 함께 맞춰야 합니다.
+  static const String googleIosClientId =
+      '103226992044-spdr96ifms73vaefkh50v2sqo78460vo.apps.googleusercontent.com';
   
   // Kids API Endpoints
   static const String families = '/kids/families';

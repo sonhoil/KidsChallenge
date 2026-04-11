@@ -82,14 +82,16 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
                     final displayCoupons = _tabController.index == 0 ? availableCoupons : usedCoupons;
 
                     if (displayCoupons.isEmpty) {
-                      return _buildEmptyState(_tabController.index == 0);
+                      return _buildEmptyState(ref, _tabController.index == 0);
                     }
 
                     return RefreshIndicator(
                       onRefresh: () async {
                         ref.invalidate(myPurchasesProvider);
+                        await ref.read(myPurchasesProvider.future);
                       },
                       child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(24),
                         itemCount: displayCoupons.length,
                         itemBuilder: (context, index) {
@@ -246,17 +248,23 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildEmptyState(bool isAvailable) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildEmptyState(WidgetRef ref, bool isAvailable) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(myPurchasesProvider);
+        await ref.read(myPurchasesProvider.future);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
           Icon(Icons.confirmation_number, size: 64, color: AppTheme.slate200),
           const SizedBox(height: 16),
           Text(
             isAvailable
                 ? '아직 사용할 수 있는 쿠폰이 없어요!'
                 : '아직 사용한 쿠폰이 없어요!',
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -266,6 +274,7 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
           const SizedBox(height: 8),
           Text(
             '상점에서 미션 포인트로 쿠폰을 구매해보세요.',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,

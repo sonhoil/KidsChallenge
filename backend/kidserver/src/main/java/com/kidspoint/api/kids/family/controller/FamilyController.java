@@ -7,6 +7,7 @@ import com.kidspoint.api.kids.family.dto.CreateFamilyRequest;
 import com.kidspoint.api.kids.family.dto.FamilyMemberResponse;
 import com.kidspoint.api.kids.family.dto.FamilyResponse;
 import com.kidspoint.api.kids.family.dto.JoinFamilyRequest;
+import com.kidspoint.api.kids.family.dto.UpdateFamilyMemberNicknameRequest;
 import com.kidspoint.api.kids.family.dto.UpdateFamilyNameRequest;
 import com.kidspoint.api.kids.family.service.FamilyService;
 import jakarta.validation.Valid;
@@ -119,6 +120,29 @@ public class FamilyController extends ApiControllerBase {
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(response, "Family member added successfully"));
         } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{familyId}/members/{memberId}")
+    public ResponseEntity<ApiResponse<FamilyMemberResponse>> updateMemberNickname(
+            @PathVariable UUID familyId,
+            @PathVariable UUID memberId,
+            @Valid @RequestBody UpdateFamilyMemberNicknameRequest request) {
+        UUID userId = getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Not authenticated"));
+        }
+        try {
+            FamilyMemberResponse updated = familyService.updateMemberNickname(
+                userId, familyId, memberId, request.getNickname());
+            return ResponseEntity.ok(ApiResponse.ok(updated, "Member name updated"));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(e.getMessage()));
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(e.getMessage()));
         }

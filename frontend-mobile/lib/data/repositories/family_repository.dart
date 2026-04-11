@@ -116,6 +116,27 @@ class FamilyRepository {
     throw Exception(response.data['message'] ?? 'Failed to update family');
   }
 
+  Future<FamilyMemberModel> updateMemberNickname(
+    String familyId,
+    String memberId,
+    String nickname,
+  ) async {
+    final response = await _apiClient.patch(
+      '${AppConfig.familyMembers}/$familyId/members/$memberId',
+      data: {'nickname': nickname},
+    );
+    if (response.data is Map &&
+        response.data['success'] == true &&
+        response.data['data'] != null) {
+      return FamilyMemberModel.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+    }
+    throw Exception(
+      response.data is Map ? (response.data['message'] as String?) ?? '이름 변경 실패' : '이름 변경 실패',
+    );
+  }
+
   Future<void> deleteFamilyMember(String familyId, String memberId) async {
     final response = await _apiClient.delete(
       '${AppConfig.familyMembers}/$familyId/members/$memberId',

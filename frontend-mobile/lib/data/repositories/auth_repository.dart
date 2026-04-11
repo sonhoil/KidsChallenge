@@ -3,6 +3,12 @@ import 'package:kids_challenge/data/datasources/api_client.dart';
 import 'package:kids_challenge/data/models/user_model.dart';
 import 'package:kids_challenge/core/config/app_config.dart';
 
+/// /auth/me 가 401·403일 때 — 저장된 세션이 서버에서 무효함
+class SessionExpiredException implements Exception {
+  @override
+  String toString() => 'Session expired';
+}
+
 class AuthRepository {
   final ApiClient _apiClient;
 
@@ -62,9 +68,14 @@ class AuthRepository {
 
   Future<UserModel> getCurrentUser() async {
     final response = await _apiClient.get(AppConfig.authMe);
-    
-    if (response.data['success'] == true && response.data['data'] != null) {
-      return UserModel.fromJson(response.data['data']);
+    final code = response.statusCode ?? 0;
+    if (code == 401 || code == 403) {
+      throw SessionExpiredException();
+    }
+    if (response.data is Map &&
+        response.data['success'] == true &&
+        response.data['data'] != null) {
+      return UserModel.fromJson(response.data['data'] as Map<String, dynamic>);
     }
     throw Exception('Failed to get current user');
   }

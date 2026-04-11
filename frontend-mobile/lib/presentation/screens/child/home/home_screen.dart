@@ -170,14 +170,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                       return ao.compareTo(bo);
                     });
                     if (missions.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          ref.invalidate(myMissionsProvider);
+                          if (family != null) {
+                            ref.invalidate(pointBalanceProvider(family.id));
+                          }
+                          await Future.wait([
+                            ref.read(myMissionsProvider.future),
+                            if (family != null) ref.read(pointBalanceProvider(family.id).future),
+                          ]);
+                        },
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
                             Icon(Icons.task_alt, size: 64, color: AppTheme.slate300),
                             const SizedBox(height: 16),
                             Text(
                               '오늘 할 미션이 없어요!',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -195,8 +207,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                         if (family != null) {
                           ref.invalidate(pointBalanceProvider(family.id));
                         }
+                        await Future.wait([
+                          ref.read(myMissionsProvider.future),
+                          if (family != null) ref.read(pointBalanceProvider(family.id).future),
+                        ]);
                       },
                       child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,14 +308,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
     return approvedAsync.when(
       data: (items) {
         if (items.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(myApprovedMissionsThisWeekProvider);
+              await ref.read(myApprovedMissionsThisWeekProvider.future);
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.2),
                 Icon(Icons.verified, size: 64, color: AppTheme.slate300),
                 const SizedBox(height: 16),
                 Text(
                   '지급된 미션이 없어요',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -311,9 +334,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
         }
         return RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(myApprovedMissionsByDateProvider(null));
+            ref.invalidate(myApprovedMissionsThisWeekProvider);
+            await ref.read(myApprovedMissionsThisWeekProvider.future);
           },
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +366,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
             const Text('지급된 미션을 불러오지 못했습니다'),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => ref.invalidate(myApprovedMissionsByDateProvider(null)),
+              onPressed: () => ref.invalidate(myApprovedMissionsThisWeekProvider),
               child: const Text('다시 시도'),
             ),
           ],

@@ -34,6 +34,10 @@ class ParentSettingsScreen extends ConsumerWidget {
               onRefresh: () async {
                 ref.invalidate(myFamiliesProvider);
                 ref.invalidate(familyMembersProvider(family.id));
+                await Future.wait([
+                  ref.read(myFamiliesProvider.future),
+                  ref.read(familyMembersProvider(family.id).future),
+                ]);
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),

@@ -312,14 +312,22 @@ public class FamilyService {
         response.setFamilyId(member.getFamilyId());
         response.setUserId(member.getUserId());
         response.setRole(member.getRole().name());
-        // 표시 닉네임 우선순위:
-        // 1) 연결된 사용자(users.nickname, 설정 변경 반영)
-        // 2) 가족 멤버 별칭(family_members.nickname)
+        // 아이: 가족 멤버 별칭만 사용(연결 계정/부모 로그인명과 섞이지 않도록 users 테이블로 보강하지 않음)
+        // 부모: 별칭이 비었을 때만 연결된 계정 닉네임 사용
         String displayNickname = member.getNickname();
-        if (member.getUserId() != null) {
-            User linkedUser = userMapper.selectById(member.getUserId());
-            if (linkedUser != null && linkedUser.getNickname() != null && !linkedUser.getNickname().isBlank()) {
-                displayNickname = linkedUser.getNickname();
+        if (member.getRole() == FamilyMember.FamilyRole.child) {
+            if (displayNickname != null) {
+                displayNickname = displayNickname.trim();
+                if (displayNickname.isEmpty()) {
+                    displayNickname = null;
+                }
+            }
+        } else {
+            if ((displayNickname == null || displayNickname.isBlank()) && member.getUserId() != null) {
+                User linkedUser = userMapper.selectById(member.getUserId());
+                if (linkedUser != null && linkedUser.getNickname() != null && !linkedUser.getNickname().isBlank()) {
+                    displayNickname = linkedUser.getNickname();
+                }
             }
         }
         response.setNickname(displayNickname);
@@ -327,6 +335,34 @@ public class FamilyService {
         response.setCreatedAt(member.getCreatedAt());
         response.setUpdatedAt(member.getUpdatedAt());
         return response;
+    }
+
+    /**
+     * 부모만 가족 내 멤버 표시 이름(별칭) 수정
+     */
+    public FamilyMemberResponse updateMemberNickname(UUID currentUserId, UUID familyId, UUID memberId, String nickname) {
+        FamilyMember self = familyMemberMapper.selectByFamilyAndUser(familyId, currentUserId);
+        if (self == null || self.getRole() != FamilyMember.FamilyRole.parent) {
+            throw new IllegalStateException("Only parents can update member names");
+        }
+        FamilyMember target = familyMemberMapper.selectById(memberId);
+        if (target == null || !target.getFamilyId().equals(familyId)) {
+            throw new IllegalArgumentException("Family member not found");
+        }
+        if (target.getRole() != FamilyMember.FamilyRole.child) {
+            throw new IllegalArgumentException("아이 멤버만 이름을 변경할 수 있습니다");
+        }
+        String trimmed = nickname != null ? nickname.trim() : "";
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("이름을 입력해주세요");
+        }
+        if (trimmed.length() > 40) {
+            throw new IllegalArgumentException("이름은 40자 이하로 입력해주세요");
+        }
+        target.setNickname(trimmed);
+        target.setUpdatedAt(Instant.now());
+        familyMemberMapper.update(target);
+        return toFamilyMemberResponse(target);
     }
 }
 

@@ -8,6 +8,9 @@ class ApiClient {
   static const String _sessionKey = 'session_id';
   static const String _authTokenKey = 'auth_token';
 
+  /// [main]에서 prefs 로드 직후·로그인 직후 설정. 첫 요청 인터셉터 타이밍 이슈로 Bearer가 빠지는 것을 방지합니다.
+  static String? cachedBearerToken;
+
   ApiClient() {
     _dio = Dio(
       BaseOptions(
@@ -47,8 +50,10 @@ class ApiClient {
                 print('[API] Added Cookie header for mobile: SESSION=$sessionId');
               }
               
-              // Bearer 토큰이 있다면 Authorization 헤더로도 추가 (세션 쿠키가 없을 때 대비)
-              final authToken = prefs.getString(_authTokenKey);
+              // Bearer: 메모리 캐시 우선(콜드 스타트 첫 요청 대비), 이후 SharedPreferences
+              final authToken = (cachedBearerToken != null && cachedBearerToken!.isNotEmpty)
+                  ? cachedBearerToken
+                  : prefs.getString(_authTokenKey);
               if (authToken != null && authToken.isNotEmpty) {
                 options.headers['Authorization'] = 'Bearer $authToken';
                 print('[API] Added Authorization header for mobile: Bearer $authToken');
@@ -198,6 +203,24 @@ class ApiClient {
   }) async {
     try {
       return await _dio.put<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response<T>> patch<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.patch<T>(
         path,
         data: data,
         queryParameters: queryParameters,

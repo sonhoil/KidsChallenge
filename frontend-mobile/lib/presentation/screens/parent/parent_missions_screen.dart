@@ -32,12 +32,22 @@ class ParentMissionsScreen extends ConsumerWidget {
           _buildHeader(context),
           Expanded(
             child: missionsAsync.when(
-              data: (missions) => _buildMissionList(
-                context,
-                ref,
-                family.id,
-                missions,
-                membersAsync.value ?? const [],
+              data: (missions) => RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(allMissionsProvider(family.id));
+                  ref.invalidate(familyMembersProvider(family.id));
+                  await Future.wait([
+                    ref.read(allMissionsProvider(family.id).future),
+                    ref.read(familyMembersProvider(family.id).future),
+                  ]);
+                },
+                child: _buildMissionList(
+                  context,
+                  ref,
+                  family.id,
+                  missions,
+                  membersAsync.value ?? const [],
+                ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
@@ -76,6 +86,7 @@ class ParentMissionsScreen extends ConsumerWidget {
     final hiddenCount = missions.length - activeCount;
 
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

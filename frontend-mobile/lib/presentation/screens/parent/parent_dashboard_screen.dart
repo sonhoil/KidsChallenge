@@ -18,11 +18,11 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final family = ref.read(currentFamilyProvider);
       if (family != null) {
-        // 최초 진입 시 강제 새로고침으로 빈 목록 문제 방지
-        ref.refresh(pendingMissionsProvider(family.id));
+        ref.invalidate(pendingMissionsProvider(family.id));
+        await ref.read(pendingMissionsProvider(family.id).future);
       }
     });
   }
@@ -40,17 +40,40 @@ class _ParentDashboardScreenState extends ConsumerState<ParentDashboardScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildActionButtons(),
-                  const SizedBox(height: 24),
-                  _buildPendingSection(pendingMissionsAsync, family?.id),
-                ],
-              ),
-            ),
+            child: family == null
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildActionButtons(),
+                        const SizedBox(height: 24),
+                        _buildPendingSection(pendingMissionsAsync, null),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(pendingMissionsProvider(family.id));
+                      ref.invalidate(pointBalanceProvider(family.id));
+                      await Future.wait([
+                        ref.read(pendingMissionsProvider(family.id).future),
+                        ref.read(pointBalanceProvider(family.id).future),
+                      ]);
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildActionButtons(),
+                          const SizedBox(height: 24),
+                          _buildPendingSection(pendingMissionsAsync, family.id),
+                        ],
+                      ),
+                    ),
+                  ),
           ),
           _buildBottomNav(),
         ],

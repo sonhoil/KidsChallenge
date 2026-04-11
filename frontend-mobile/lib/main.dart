@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kids_challenge/core/config/app_config.dart';
 import 'package:kids_challenge/core/theme/app_theme.dart';
 import 'package:kids_challenge/presentation/screens/login/login_screen.dart';
 import 'package:kids_challenge/presentation/screens/child/home/home_screen.dart';
@@ -19,14 +18,22 @@ import 'package:kids_challenge/presentation/screens/parent/create_reward_screen.
 import 'package:kids_challenge/presentation/screens/parent/create_member_screen.dart';
 import 'package:kids_challenge/presentation/screens/parent/child_stats_screen.dart';
 import 'package:kids_challenge/presentation/screens/parent/point_adjustment_screen.dart';
-import 'package:kids_challenge/presentation/screens/parent/child_point_edit_screen.dart';
 import 'package:kids_challenge/data/models/family_model.dart';
 import 'package:kids_challenge/data/models/reward_model.dart';
 import 'package:kids_challenge/data/models/mission_model.dart';
 import 'package:kids_challenge/presentation/screens/create_family_screen.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
+import 'package:kids_challenge/presentation/widgets/invite_link_listener.dart';
+import 'package:kids_challenge/data/datasources/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+  if (token != null && token.isNotEmpty) {
+    ApiClient.cachedBearerToken = token;
+  }
   runApp(
     const ProviderScope(
       child: KidsChallengeApp(),
@@ -47,6 +54,8 @@ class KidsChallengeApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           routerConfig: router,
+          builder: (context, child) =>
+              InviteLinkListener(child: child ?? const SizedBox.shrink()),
         );
       },
     );

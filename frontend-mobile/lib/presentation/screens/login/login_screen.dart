@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kids_challenge/core/theme/app_theme.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
+import 'package:kids_challenge/presentation/state/pending_invite_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final String? inviteCode;
@@ -22,23 +23,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  String? _inviteCode;
-  String? _memberId;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _inviteCode = widget.inviteCode;
-      _memberId = widget.memberId;
-      if (_inviteCode != null) {
-        print('[LoginScreen] Invite code from route: $_inviteCode, memberId: $_memberId');
-      }
-      if (mounted) {
-        setState(() {});
-      }
+      _persistInviteFromRoute();
     });
   }
+
+  @override
+  void didUpdateWidget(covariant LoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.inviteCode != oldWidget.inviteCode ||
+        widget.memberId != oldWidget.memberId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _persistInviteFromRoute();
+      });
+    }
+  }
+
+  /// 라우트에 초대 파라미터가 있으면 pending에 복사해 GoRouter 재생성 시에도 유지합니다.
+  void _persistInviteFromRoute() {
+    if (widget.inviteCode != null && widget.inviteCode!.isNotEmpty) {
+      storePendingInvite(ref, widget.inviteCode!, widget.memberId);
+      print(
+        '[LoginScreen] Invite from route → pending: ${widget.inviteCode}, memberId: ${widget.memberId}',
+      );
+    }
+  }
+
+  String? _effectiveInviteCode() =>
+      widget.inviteCode ?? ref.read(pendingInviteCodeProvider);
+
+  String? _effectiveMemberId() =>
+      widget.memberId ?? ref.read(pendingMemberIdProvider);
 
   @override
   void dispose() {
@@ -63,8 +82,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final success = await ref.read(authStateProvider.notifier).login(
       _usernameController.text,
       _passwordController.text,
-      inviteCode: _inviteCode,
-      memberId: _memberId,
+      inviteCode: _effectiveInviteCode(),
+      memberId: _effectiveMemberId(),
     );
 
     if (!mounted) return;
@@ -87,8 +106,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     
     final success = await ref.read(authStateProvider.notifier).loginWithKakao(
-      inviteCode: _inviteCode,
-      memberId: _memberId,
+      inviteCode: _effectiveInviteCode(),
+      memberId: _effectiveMemberId(),
     );
 
     if (!mounted) return;
@@ -111,8 +130,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
     
     final success = await ref.read(authStateProvider.notifier).loginWithGoogle(
-      inviteCode: _inviteCode,
-      memberId: _memberId,
+      inviteCode: _effectiveInviteCode(),
+      memberId: _effectiveMemberId(),
     );
 
     if (!mounted) return;
@@ -147,6 +166,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
+    final pendingCode = ref.watch(pendingInviteCodeProvider);
+    final pendingMember = ref.watch(pendingMemberIdProvider);
+    final inviteCode = widget.inviteCode ?? pendingCode;
+    final memberId = widget.memberId ?? pendingMember;
 
     if (authState.bootstrapping) {
       return const Scaffold(
@@ -196,7 +219,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
-              if (_inviteCode != null) ...[
+              if (inviteCode != null) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -206,7 +229,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     border: Border.all(color: AppTheme.primaryLight),
                   ),
                   child: Text(
-                    _memberId != null
+                    memberId != null
                         ? '초대 링크로 들어왔어요. 로그인하면 지정된 아이 프로필에 바로 연결됩니다.'
                         : '가족 초대 링크로 들어왔어요. 로그인하면 가족에 참여합니다.',
                     style: const TextStyle(

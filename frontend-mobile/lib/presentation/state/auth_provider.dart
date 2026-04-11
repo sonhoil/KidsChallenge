@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/api_client.dart';
@@ -8,6 +10,7 @@ import '../../data/models/user_model.dart';
 import '../../data/models/family_model.dart';
 import '../../core/services/kakao_auth_service.dart';
 import '../../core/services/google_auth_service.dart';
+import 'pending_invite_provider.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 
@@ -62,6 +65,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _authRepository;
   final Ref _ref;
   static const bool _autoTestLogin = false; // 테스트용 자동 로그인 비활성화
+  static const String _cachedUserJsonKey = 'cached_user_json';
 
   AuthNotifier(this._authRepository, this._ref) : super(AuthState(bootstrapping: true)) {
     if (_autoTestLogin) {
@@ -88,25 +92,72 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> _persistSession(UserModel user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_id', user.id);
+    await prefs.setString('auth_token', user.id);
+    await prefs.setString(_cachedUserJsonKey, jsonEncode(user.toJson()));
+    ApiClient.cachedBearerToken = user.id;
+  }
+
+  Future<UserModel?> _readCachedUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cachedUserJsonKey);
+      if (raw == null || raw.isEmpty) return null;
+      return UserModel.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _clearSessionPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_id');
+    await prefs.remove('auth_token');
+    await prefs.remove('session_id');
+    await prefs.remove(_cachedUserJsonKey);
+    ApiClient.cachedBearerToken = null;
+  }
+
   Future<void> _loadUser() async {
     try {
       print('[Auth] Loading current user...');
-      final user = await _authRepository.getCurrentUser();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', user.id);
-      await prefs.setString('auth_token', user.id);
+      final token = prefs.getString('auth_token');
+      if (token == null || token.isEmpty) {
+        state = AuthState(bootstrapping: false);
+        return;
+      }
+      ApiClient.cachedBearerToken = token;
+
+      final user = await _authRepository.getCurrentUser();
+      await _persistSession(user);
       print('[Auth] Current user loaded: ${user.nickname}');
       state = state.copyWith(user: user, bootstrapping: false);
       _ref.invalidate(myFamiliesProvider);
       await _initializeFamily(null);
+    } on SessionExpiredException {
+      print('[Auth] Session expired (401/403), clearing local session');
+      await _clearSessionPrefs();
+      state = AuthState(bootstrapping: false);
     } catch (e) {
       print('[Auth] Failed to load user: $e');
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_id');
-      await prefs.remove('auth_token');
-      await prefs.remove('session_id');
-      // 로그인 안 된 상태
-      state = AuthState(bootstrapping: false);
+      final token = prefs.getString('auth_token');
+      final cached = await _readCachedUser();
+      if (token != null &&
+          cached != null &&
+          cached.id == token) {
+        print('[Auth] Restoring user from local cache after API/network error');
+        ApiClient.cachedBearerToken = token;
+        state = state.copyWith(user: cached, bootstrapping: false);
+        _ref.invalidate(myFamiliesProvider);
+        await _initializeFamily(null);
+      } else {
+        await _clearSessionPrefs();
+        state = AuthState(bootstrapping: false);
+      }
     }
   }
 
@@ -116,11 +167,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
       await prefs.remove('auth_token');
+      await prefs.remove(_cachedUserJsonKey);
+      ApiClient.cachedBearerToken = null;
       _ref.read(currentFamilyProvider.notifier).state = null;
       _ref.invalidate(myFamiliesProvider);
       final user = await _authRepository.login(username, password);
-      await prefs.setString('user_id', user.id);
-      await prefs.setString('auth_token', user.id);
+      await _persistSession(user);
       state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
       
       // 로그인 후 초기화: 가족 설정
@@ -147,6 +199,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         _ref.read(currentFamilyProvider.notifier).state = joinedFamily;
         _ref.invalidate(myFamiliesProvider);
+        clearPendingInviteForRef(_ref);
         print('[AuthNotifier] Successfully joined family: ${joinedFamily.id}');
         return;
       }
@@ -171,6 +224,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
       await prefs.remove('auth_token');
+      await prefs.remove(_cachedUserJsonKey);
+      ApiClient.cachedBearerToken = null;
       _ref.read(currentFamilyProvider.notifier).state = null;
       _ref.invalidate(myFamiliesProvider);
       // 카카오 로그인 서비스 초기화
@@ -185,9 +240,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // 백엔드에 카카오 액세스 토큰 전달하여 로그인
       final user = await _authRepository.loginWithKakao(accessToken);
-      await prefs.setString('user_id', user.id);
-      // Bearer 토큰으로도 사용할 수 있도록 auth_token 저장 (UUID 문자열)
-      await prefs.setString('auth_token', user.id);
+      await _persistSession(user);
       state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
       
       // 로그인 후 초기화: 가족 설정
@@ -206,6 +259,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
       await prefs.remove('auth_token');
+      await prefs.remove(_cachedUserJsonKey);
+      ApiClient.cachedBearerToken = null;
       _ref.read(currentFamilyProvider.notifier).state = null;
       _ref.invalidate(myFamiliesProvider);
       // 구글 로그인 수행
@@ -217,9 +272,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // 백엔드에 구글 액세스 토큰 전달하여 로그인
       final user = await _authRepository.loginWithGoogle(accessToken);
-      await prefs.setString('user_id', user.id);
-      // Bearer 토큰으로도 사용할 수 있도록 auth_token 저장 (UUID 문자열)
-      await prefs.setString('auth_token', user.id);
+      await _persistSession(user);
       state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
       
       // 로그인 후 초기화: 가족 설정
@@ -265,11 +318,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     try {
       await _authRepository.logout();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_id');
-      await prefs.remove('auth_token');
-      await prefs.remove('session_id');
-      
+      await _clearSessionPrefs();
+
       // 소셜 로그인 로그아웃도 수행
       try {
         await KakaoAuthService.logout();
@@ -285,6 +335,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       _ref.read(currentFamilyProvider.notifier).state = null;
       _ref.invalidate(myFamiliesProvider);
+      clearPendingInviteForRef(_ref);
       state = AuthState();
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -294,6 +345,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> updateNickname(String newNickname) async {
     try {
       final updated = await _authRepository.updateNickname(newNickname);
+      await _persistSession(updated);
       state = state.copyWith(user: updated);
       return true;
     } catch (e) {
