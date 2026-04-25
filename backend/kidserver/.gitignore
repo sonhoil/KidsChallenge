@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Firebase Admin SDK (로컬 전용, 커밋 금지)
+config/firebase-adminsdk.json
+*firebase-adminsdk*.json
+
+# 로컬 전용 FCM/비밀 오버라이드
+src/main/resources/application-fcm.local.properties

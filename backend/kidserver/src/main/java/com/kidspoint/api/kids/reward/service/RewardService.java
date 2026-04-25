@@ -13,12 +13,15 @@ import com.kidspoint.api.kids.reward.domain.RewardPurchase;
 import com.kidspoint.api.kids.reward.dto.*;
 import com.kidspoint.api.kids.reward.mapper.RewardMapper;
 import com.kidspoint.api.kids.reward.mapper.RewardPurchaseMapper;
+import com.kidspoint.api.push.service.FcmPushService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,6 +35,7 @@ public class RewardService {
     private final UserMapper userMapper;
     private final PointService pointService;
     private final PointTransactionMapper pointTransactionMapper;
+    private final FcmPushService fcmPushService;
 
     @Autowired
     public RewardService(
@@ -40,13 +44,15 @@ public class RewardService {
             FamilyMemberMapper familyMemberMapper,
             UserMapper userMapper,
             PointService pointService,
-            PointTransactionMapper pointTransactionMapper) {
+            PointTransactionMapper pointTransactionMapper,
+            FcmPushService fcmPushService) {
         this.rewardMapper = rewardMapper;
         this.rewardPurchaseMapper = rewardPurchaseMapper;
         this.familyMemberMapper = familyMemberMapper;
         this.userMapper = userMapper;
         this.pointService = pointService;
         this.pointTransactionMapper = pointTransactionMapper;
+        this.fcmPushService = fcmPushService;
     }
 
     public RewardResponse createReward(UUID userId, CreateRewardRequest request) {
@@ -120,7 +126,28 @@ public class RewardService {
 
         rewardPurchaseMapper.insert(purchase);
 
+        notifyParentsStorePurchase(reward.getFamilyId(), member, reward);
         return toPurchaseResponse(purchase, reward, member);
+    }
+
+    private void notifyParentsStorePurchase(UUID familyId, FamilyMember buyerMember, Reward reward) {
+        if (!fcmPushService.isFcmEnabled()) {
+            return;
+        }
+        List<UUID> parentIds = familyMemberMapper.selectByFamilyId(familyId).stream()
+            .filter(m -> m.getRole() == FamilyMember.FamilyRole.parent)
+            .map(FamilyMember::getUserId)
+            .collect(Collectors.toList());
+        if (parentIds.isEmpty()) {
+            return;
+        }
+        String buyerName = (buyerMember != null && buyerMember.getNickname() != null && !buyerMember.getNickname().isBlank())
+            ? buyerMember.getNickname() : "아이";
+        String title = reward.getTitle() != null ? reward.getTitle() : "쿠폰";
+        Map<String, String> data = new HashMap<>();
+        data.put(FcmPushService.DATA_TYPE, FcmPushService.TYPE_REWARD_PURCHASED);
+        fcmPushService.sendToUsers(parentIds, "상점 구매 알림",
+            buyerName + "님이 「" + title + "」을(를) 구매했어요.", data);
     }
 
     public List<RewardPurchaseResponse> getMyPurchases(UUID userId, String status) {

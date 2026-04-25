@@ -5,9 +5,11 @@
 *.swp
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -37,6 +39,9 @@ app.*.symbols
 
 # Obfuscation related
 app.*.map.json
+
+# Firebase Admin SDK (절대 커밋하지 말 것)
+*firebase-adminsdk*.json
 
 # Android Studio will place build artifacts here
 /android/app/debug

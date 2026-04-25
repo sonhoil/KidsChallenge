@@ -41,12 +41,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
 
     return Scaffold(
-      backgroundColor: AppTheme.slate50,
+      backgroundColor: AppTheme.childShellBackground,
       body: Column(
         children: [
           _buildHeader(),
           Expanded(
             child: RefreshIndicator(
+              color: AppTheme.childSky500,
               onRefresh: () async {
                 ref.invalidate(authStateProvider);
                 ref.invalidate(myMissionsProvider);
@@ -66,7 +67,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                 child: Column(
                   children: [
                     _buildStatsGrid(pointsAsync, missionsAsync, purchasesAsync),
@@ -84,14 +85,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.brown.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -99,26 +101,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         bottom: false,
         child: Row(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '내 활동',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.slate800,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '내 활동',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.slate800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text('📊', style: TextStyle(fontSize: 22)),
+                    ],
                   ),
-                ),
-                Text(
-                  '최근 활동과 통계를 확인해봐요',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.slate500,
+                  const SizedBox(height: 4),
+                  Text(
+                    '통계와 설정을 확인해요',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.slate400,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -152,7 +164,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: AppTheme.slate100, width: 2),
+        border: Border.all(color: AppTheme.childCardBorder, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -286,15 +298,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         _buildStatCard(
           icon: Icons.hourglass_top,
-          iconBg: AppTheme.primaryLight.withOpacity(0.25),
-          iconColor: AppTheme.primary,
+          iconBg: AppTheme.childSky100,
+          iconColor: AppTheme.childSky600,
           label: '승인 대기',
           value: '$pendingCount개',
         ),
         _buildStatCard(
           icon: Icons.confirmation_number,
-          iconBg: AppTheme.slate100,
-          iconColor: AppTheme.slate600,
+          iconBg: AppTheme.childSky100,
+          iconColor: AppTheme.childSky600,
           label: '사용 가능한 쿠폰',
           value: '$availableCoupons장',
         ),
@@ -314,7 +326,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.slate100, width: 2),
+        border: Border.all(color: AppTheme.childCardBorder, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -396,7 +408,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: AppTheme.slate100, width: 2),
+        border: Border.all(color: AppTheme.childCardBorder, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -417,10 +429,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
+                        color: AppTheme.childSky100,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.notifications, color: Color(0xFFEF4444), size: 20),
+                      child: Icon(Icons.notifications, color: AppTheme.childSky600, size: 20),
                     ),
                     const SizedBox(width: 16),
                     const Text(
@@ -440,7 +452,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       _notificationsEnabled = value;
                     });
                   },
-                  activeColor: AppTheme.primary,
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: AppTheme.childSky300,
+                  inactiveThumbColor: AppTheme.slate300,
+                  inactiveTrackColor: AppTheme.slate100,
                 ),
               ],
             ),

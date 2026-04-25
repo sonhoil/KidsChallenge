@@ -25,10 +25,12 @@ import 'package:kids_challenge/presentation/screens/create_family_screen.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
 import 'package:kids_challenge/presentation/widgets/invite_link_listener.dart';
 import 'package:kids_challenge/data/datasources/api_client.dart';
+import 'package:kids_challenge/core/services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PushNotificationService.init();
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('auth_token');
   if (token != null && token.isNotEmpty) {

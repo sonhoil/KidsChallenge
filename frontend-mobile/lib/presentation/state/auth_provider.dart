@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../data/models/user_model.dart';
 import '../../data/models/family_model.dart';
 import '../../core/services/kakao_auth_service.dart';
 import '../../core/services/google_auth_service.dart';
+import '../../core/services/push_notification_service.dart';
 import 'pending_invite_provider.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
@@ -98,6 +100,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await prefs.setString('auth_token', user.id);
     await prefs.setString(_cachedUserJsonKey, jsonEncode(user.toJson()));
     ApiClient.cachedBearerToken = user.id;
+    unawaited(PushNotificationService.syncTokenToBackend());
   }
 
   Future<UserModel?> _readCachedUser() async {

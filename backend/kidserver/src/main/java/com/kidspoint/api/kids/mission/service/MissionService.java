@@ -12,13 +12,16 @@ import com.kidspoint.api.kids.mission.mapper.MissionAssignmentMapper;
 import com.kidspoint.api.kids.mission.mapper.MissionLogMapper;
 import com.kidspoint.api.kids.mission.mapper.MissionMapper;
 import com.kidspoint.api.kids.point.service.PointService;
+import com.kidspoint.api.push.service.FcmPushService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,6 +35,7 @@ public class MissionService {
     private final FamilyMemberMapper familyMemberMapper;
     private final UserMapper userMapper;
     private final PointService pointService;
+    private final FcmPushService fcmPushService;
 
     @Autowired
     public MissionService(
@@ -40,13 +44,15 @@ public class MissionService {
             MissionLogMapper missionLogMapper,
             FamilyMemberMapper familyMemberMapper,
             UserMapper userMapper,
-            PointService pointService) {
+            PointService pointService,
+            FcmPushService fcmPushService) {
         this.missionMapper = missionMapper;
         this.missionAssignmentMapper = missionAssignmentMapper;
         this.missionLogMapper = missionLogMapper;
         this.familyMemberMapper = familyMemberMapper;
         this.userMapper = userMapper;
         this.pointService = pointService;
+        this.fcmPushService = fcmPushService;
     }
 
     public MissionResponse createMission(UUID userId, CreateMissionRequest request) {
@@ -204,6 +210,7 @@ public class MissionService {
 
         Mission mission = missionMapper.selectById(assignment.getMissionId());
         FamilyMember member = familyMemberMapper.selectByFamilyAndUser(assignment.getFamilyId(), assignment.getAssigneeId());
+        notifyParentsMissionSubmit(assignment.getFamilyId(), member, mission);
         return toAssignmentResponse(assignment, mission, member);
     }
 
@@ -240,6 +247,7 @@ public class MissionService {
 
         Mission mission = missionMapper.selectById(assignment.getMissionId());
         FamilyMember member = familyMemberMapper.selectByFamilyAndUser(assignment.getFamilyId(), assignment.getAssigneeId());
+        notifyChildMissionResult(assignment.getAssigneeId(), true, mission);
         return toAssignmentResponse(assignment, mission, member);
     }
 
@@ -275,6 +283,7 @@ public class MissionService {
 
         Mission mission = missionMapper.selectById(assignment.getMissionId());
         FamilyMember member = familyMemberMapper.selectByFamilyAndUser(assignment.getFamilyId(), assignment.getAssigneeId());
+        notifyChildMissionResult(assignment.getAssigneeId(), false, mission);
         return toAssignmentResponse(assignment, mission, member);
     }
 
@@ -601,5 +610,41 @@ public class MissionService {
             response.setRecentlyRejected(false);
         }
         return response;
+    }
+
+    private void notifyParentsMissionSubmit(UUID familyId, FamilyMember childMember, Mission mission) {
+        if (!fcmPushService.isFcmEnabled()) {
+            return;
+        }
+        List<UUID> parentIds = familyMemberMapper.selectByFamilyId(familyId).stream()
+            .filter(m -> m.getRole() == FamilyMember.FamilyRole.parent)
+            .map(FamilyMember::getUserId)
+            .collect(Collectors.toList());
+        if (parentIds.isEmpty()) {
+            return;
+        }
+        String childName = (childMember != null && childMember.getNickname() != null && !childMember.getNickname().isBlank())
+            ? childMember.getNickname() : "아이";
+        String mTitle = mission != null && mission.getTitle() != null ? mission.getTitle() : "미션";
+        Map<String, String> data = new HashMap<>();
+        data.put(FcmPushService.DATA_TYPE, FcmPushService.TYPE_MISSION_SUBMIT);
+        fcmPushService.sendToUsers(parentIds, "미션 완료 요청",
+            childName + "님이 「" + mTitle + "」을(를) 끝냈어요! 확인해보세요.", data);
+    }
+
+    private void notifyChildMissionResult(UUID childUserId, boolean approved, Mission mission) {
+        if (!fcmPushService.isFcmEnabled()) {
+            return;
+        }
+        String mTitle = mission != null && mission.getTitle() != null ? mission.getTitle() : "미션";
+        Map<String, String> data = new HashMap<>();
+        data.put(FcmPushService.DATA_TYPE, approved ? FcmPushService.TYPE_MISSION_APPROVED : FcmPushService.TYPE_MISSION_REJECTED);
+        if (approved) {
+            fcmPushService.sendToUser(childUserId, "미션이 승인됐어요 🎉",
+                "「" + mTitle + "」 획득 포인트를 확인해보세요!", data);
+        } else {
+            fcmPushService.sendToUser(childUserId, "미션이 반려됐어요",
+                "「" + mTitle + "」을(를) 다시 도전해보세요.", data);
+        }
     }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kids_challenge/core/theme/app_theme.dart';
-import 'package:kids_challenge/presentation/widgets/reward_icon_display.dart';
+import 'package:kids_challenge/presentation/widgets/reward_list_row.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
 import 'package:kids_challenge/presentation/state/reward_provider.dart';
 import 'package:kids_challenge/data/models/reward_model.dart';
@@ -16,15 +16,6 @@ class StoreScreen extends ConsumerStatefulWidget {
 
 class _StoreScreenState extends ConsumerState<StoreScreen> {
   late ConfettiController _confettiController;
-
-  static const _pastelIconBg = <Color>[
-    Color(0xFFE0F2FE),
-    Color(0xFFFFF7ED),
-    Color(0xFFDCFCE7),
-    Color(0xFFFCE7F3),
-    Color(0xFFEDE9FE),
-    Color(0xFFFFE4E6),
-  ];
 
   @override
   void initState() {
@@ -62,8 +53,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     }
   }
 
-  Color _accentForIndex(int index) => _pastelIconBg[index % _pastelIconBg.length];
-
   @override
   Widget build(BuildContext context) {
     final family = ref.watch(currentFamilyProvider);
@@ -75,7 +64,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         : const AsyncValue<int>.loading();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F4),
+      backgroundColor: AppTheme.childShellBackground,
       body: Stack(
         children: [
           Column(
@@ -148,13 +137,32 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         itemBuilder: (context, index) {
                           final reward = rewards[index];
                           final canBuy = points >= reward.pricePoints;
-                          return _CouponRow(
-                            reward: reward,
-                            iconBg: _accentForIndex(index),
-                            canBuy: canBuy,
-                            onExchange: family != null && canBuy
-                                ? () => _handleBuy(reward, family.id)
-                                : null,
+                          final onBuy = family != null && canBuy
+                              ? () => _handleBuy(reward, family.id)
+                              : null;
+                          return RewardListRow(
+                            iconType: reward.iconType,
+                            iconBg: AppTheme.childRewardIconWellBackground,
+                            title: reward.title,
+                            showSpecialBadge: reward.category == 'SPECIAL',
+                            metaLine: Row(
+                              children: [
+                                Icon(Icons.stars_rounded, size: 16, color: AppTheme.amber500),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${reward.pricePoints}P',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.slate600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actionLabel: canBuy ? '교환' : '부족',
+                            actionPrimary: canBuy,
+                            onAction: onBuy,
+                            onRowTap: onBuy,
                           );
                         },
                       ),
@@ -294,147 +302,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               error: (_, __) => const SizedBox.shrink(),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CouponRow extends StatelessWidget {
-  const _CouponRow({
-    required this.reward,
-    required this.iconBg,
-    required this.canBuy,
-    this.onExchange,
-  });
-
-  final RewardModel reward;
-  final Color iconBg;
-  final bool canBuy;
-  final VoidCallback? onExchange;
-
-  @override
-  Widget build(BuildContext context) {
-    final isSpecial = reward.category == 'SPECIAL';
-
-    return Material(
-      color: Colors.white,
-      elevation: 0,
-      shadowColor: Colors.transparent,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onExchange,
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFF5E6DC)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.brown.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  alignment: Alignment.center,
-                  child: RewardIconDisplay(
-                    iconType: reward.iconType,
-                    size: 44,
-                    materialIconColor: const Color(0xFF57534E),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (isSpecial)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFE8EE),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              '특별',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFE11D48),
-                              ),
-                            ),
-                          ),
-                        ),
-                      Text(
-                        reward.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF44403C),
-                          height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.stars_rounded, size: 16, color: AppTheme.amber500),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${reward.pricePoints}P',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.slate600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FilledButton(
-                      onPressed: onExchange,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        backgroundColor: canBuy ? const Color(0xFFFF9EB5) : AppTheme.slate200,
-                        foregroundColor: canBuy ? const Color(0xFF7C2D12) : AppTheme.slate500,
-                        disabledBackgroundColor: AppTheme.slate200,
-                        disabledForegroundColor: AppTheme.slate400,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
-                        canBuy ? '교환' : '부족',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

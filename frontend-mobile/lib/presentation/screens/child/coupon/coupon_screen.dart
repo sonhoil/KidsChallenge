@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kids_challenge/core/theme/app_theme.dart';
-import 'package:kids_challenge/presentation/widgets/ticket_card.dart';
+import 'package:kids_challenge/presentation/widgets/reward_list_row.dart';
 import 'package:kids_challenge/presentation/state/reward_provider.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
 import 'package:kids_challenge/core/utils/date_utils.dart' as AppDateUtils;
@@ -67,7 +67,7 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
     final user = ref.watch(authStateProvider).user;
 
     return Scaffold(
-      backgroundColor: AppTheme.slate50,
+      backgroundColor: AppTheme.childShellBackground,
       body: Stack(
         children: [
           Column(
@@ -86,32 +86,72 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
                     }
 
                     return RefreshIndicator(
+                      color: AppTheme.childSky500,
                       onRefresh: () async {
                         ref.invalidate(myPurchasesProvider);
                         await ref.read(myPurchasesProvider.future);
                       },
-                      child: ListView.builder(
+                      child: ListView.separated(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                         itemCount: displayCoupons.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final purchase = displayCoupons[index];
-                          return TicketCard(
-                            key: ValueKey('${purchase.id}-${purchase.status}'),
-                            id: purchase.id,
-                            title: purchase.rewardTitle ?? '리워드',
-                            ownerName: purchase.buyerNickname ?? user?.nickname ?? '나',
-                            isUsed: purchase.status == 'used',
-                            dateStr: AppDateUtils.DateUtils.formatTimeAgo(purchase.createdAt),
-                            onUse: purchase.status == 'used'
-                                ? null
-                                : () => _handleUse(purchase.id),
+                          final isUsed = purchase.status == 'used';
+                          final title = purchase.rewardTitle ?? '리워드';
+                          final ownerLabel =
+                              '${purchase.buyerNickname ?? user?.nickname ?? '나'}님 쿠폰';
+                          final dateStr = AppDateUtils.DateUtils.formatTimeAgo(purchase.createdAt);
+                          final onUse =
+                              isUsed ? null : () => _handleUse(purchase.id);
+
+                          return RewardListRow(
+                            iconType: purchase.rewardIconType,
+                            iconBg: AppTheme.childRewardIconWellBackground,
+                            title: title,
+                            primaryButtonBackground: AppTheme.childSky300,
+                            primaryButtonForeground: AppTheme.childSky900,
+                            showSpecialBadge: false,
+                            metaLine: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  ownerLabel,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.slate400,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.schedule_rounded, size: 16, color: AppTheme.slate400),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      dateStr,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.slate500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            actionLabel: isUsed ? '완료' : '사용',
+                            actionPrimary: !isUsed,
+                            onAction: onUse,
+                            onRowTap: onUse,
                           );
                         },
                       ),
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator(color: AppTheme.childSky500)),
                   error: (error, stack) => Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -157,14 +197,15 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.brown.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -172,35 +213,36 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
         bottom: false,
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryLight.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '쿠폰함',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.slate800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text('🎟️', style: TextStyle(fontSize: 22)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '받은 쿠폰을 확인해요',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.slate400,
+                    ),
+                  ),
+                ],
               ),
-              child: Icon(Icons.confirmation_number, color: AppTheme.primary, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '쿠폰함',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.slate800,
-                  ),
-                ),
-                Text(
-                  '보상으로 받은 쿠폰을 확인하세요!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.slate500,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -210,20 +252,39 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
 
   Widget _buildTabs() {
     final purchasesAsync = ref.watch(myPurchasesProvider);
-    
+
     return Container(
-      color: Colors.white,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.childCardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.brown.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: purchasesAsync.when(
         data: (purchases) {
           final availableCount = purchases.where((p) => p.status != 'used').length;
           final usedCount = purchases.where((p) => p.status == 'used').length;
-          
+
           return TabBar(
             controller: _tabController,
-            labelColor: AppTheme.primary,
+            labelColor: AppTheme.childSky700,
             unselectedLabelColor: AppTheme.slate400,
-            indicatorColor: AppTheme.primary,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              color: AppTheme.childSky200.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            indicatorPadding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            dividerColor: Colors.transparent,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             tabs: [
               Tab(text: '사용 가능 ($availableCount)'),
               Tab(text: '사용 완료 ($usedCount)'),
@@ -232,6 +293,9 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
         },
         loading: () => TabBar(
           controller: _tabController,
+          labelColor: AppTheme.childSky700,
+          unselectedLabelColor: AppTheme.slate400,
+          indicatorColor: Colors.transparent,
           tabs: const [
             Tab(text: '사용 가능'),
             Tab(text: '사용 완료'),
@@ -239,6 +303,8 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
         ),
         error: (_, __) => TabBar(
           controller: _tabController,
+          labelColor: AppTheme.childSky700,
+          unselectedLabelColor: AppTheme.slate400,
           tabs: const [
             Tab(text: '사용 가능'),
             Tab(text: '사용 완료'),
@@ -250,6 +316,7 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
 
   Widget _buildEmptyState(WidgetRef ref, bool isAvailable) {
     return RefreshIndicator(
+      color: AppTheme.childSky500,
       onRefresh: () async {
         ref.invalidate(myPurchasesProvider);
         await ref.read(myPurchasesProvider.future);
@@ -258,22 +325,20 @@ class _CouponScreenState extends ConsumerState<CouponScreen> with SingleTickerPr
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           SizedBox(height: MediaQuery.sizeOf(context).height * 0.18),
-          Icon(Icons.confirmation_number, size: 64, color: AppTheme.slate200),
+          const Text('🎟️', textAlign: TextAlign.center, style: TextStyle(fontSize: 56)),
           const SizedBox(height: 16),
           Text(
-            isAvailable
-                ? '아직 사용할 수 있는 쿠폰이 없어요!'
-                : '아직 사용한 쿠폰이 없어요!',
+            isAvailable ? '사용할 쿠폰이 없어요' : '사용한 쿠폰이 없어요',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: AppTheme.slate600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            '상점에서 미션 포인트로 쿠폰을 구매해보세요.',
+            '상점에서 포인트로 쿠폰을 사면 여기에 쌓여요.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,

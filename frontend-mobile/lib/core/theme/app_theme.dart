@@ -86,4 +86,22 @@ class AppTheme {
   static const Color emerald400 = Color(0xFF34D399);
   static const Color emerald500 = Color(0xFF10B981);
   static const Color emerald600 = Color(0xFF059669);
+
+  /// 아이 탭(홈·쿠폰함·프로필 등) 공통 배경·테두리
+  static const Color childShellBackground = Color(0xFFFFF8F4);
+  static const Color childCardBorder = Color(0xFFF5E6DC);
+
+  /// 쿠폰함·탭 등 하늘색 액센트
+  static const Color childSky100 = Color(0xFFE0F2FE);
+  static const Color childSky200 = Color(0xFFBAE6FD);
+  static const Color childSky300 = Color(0xFF7DD3FC);
+  static const Color childSky500 = Color(0xFF0EA5E9);
+  static const Color childSky600 = Color(0xFF0284C7);
+  static const Color childSky700 = Color(0xFF0369A1);
+  static const Color childSky900 = Color(0xFF0C4A6E);
+
+  /// 상점·쿠폰함 목록 행(흰색 계열)
+  static const Color childRewardListCardBackground = Color(0xFFFFFFFF);
+  static const Color childRewardIconWellBackground = Color(0xFFFAFAFA);
+  static const Color childRewardIconWellBorder = Color(0xFFE7E5E4);
 }

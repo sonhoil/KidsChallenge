@@ -10,3 +10,10 @@ dist/
 # Logs
 *.log
 
+# Eclipse (백엔드 워크스페이스 캐시 — 커밋 금지)
+backend/.metadata/
+
+# Firebase Android/iOS 클라이언트 설정 (콘솔에서 내려받아 로컬/CI에서만 배치)
+frontend-mobile/android/app/google-services.json
+frontend-mobile/ios/Runner/GoogleService-Info.plist
+

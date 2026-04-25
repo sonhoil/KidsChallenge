@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kidspoint.api.push.mapper.UserPushTokenMapper">
+
+    <insert id="upsert" parameterType="com.kidspoint.api.push.domain.UserPushToken">
+        INSERT INTO user_push_tokens (user_id, fcm_token, platform, updated_at)
+        VALUES (
+            #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler},
+            #{fcmToken},
+            #{platform},
+            #{updatedAt}
+        )
+        ON CONFLICT (user_id) DO UPDATE SET
+            fcm_token = EXCLUDED.fcm_token,
+            platform = EXCLUDED.platform,
+            updated_at = EXCLUDED.updated_at
+    </insert>
+
+    <select id="selectByUserId" resultType="com.kidspoint.api.push.domain.UserPushToken">
+        SELECT user_id AS userId, fcm_token AS fcmToken, platform, updated_at AS updatedAt
+        FROM user_push_tokens
+        WHERE user_id = #{userId, jdbcType=OTHER, typeHandler=com.kidspoint.api.config.UUIDTypeHandler}
+    </select>
+
+    <select id="selectFcmTokensForChildRoleUsers" resultType="string">
+        SELECT upt.fcm_token
+        FROM user_push_tokens upt
+        WHERE EXISTS (
+            SELECT 1 FROM family_members fm
+            WHERE fm.user_id = upt.user_id
+              AND fm.role = 'child'
+        )
+        AND length(trim(upt.fcm_token)) > 0
+    </select>
+</mapper>

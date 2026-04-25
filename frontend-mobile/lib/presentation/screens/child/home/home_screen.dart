@@ -76,7 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
     }
   }
 
-  Widget _buildMissionIcon(String? iconType, {Color color = const Color(0xFF3B82F6)}) {
+  Widget _buildMissionIcon(String? iconType, {Color color = const Color(0xFF0284C7)}) {
     // 아이콘 타입이 이모지/문자이면 그대로 표시, 아니면 머티리얼 아이콘 매핑 사용
     if (iconType != null && iconType.trim().isNotEmpty) {
       final t = iconType.trim();
@@ -101,11 +101,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
     final missionsAsync = ref.watch(myMissionsProvider);
     final approvedThisWeekAsync = ref.watch(myApprovedMissionsThisWeekProvider);
     final pointsAsync = family != null
-        ? ref.watch(pointBalanceProvider(family.id)) as AsyncValue<int>
+        ? ref.watch(pointBalanceProvider(family.id))
         : const AsyncValue<int>.loading();
 
     return Scaffold(
-      backgroundColor: AppTheme.slate50,
+      backgroundColor: AppTheme.childShellBackground,
       body: Stack(
         children: [
           Column(
@@ -145,13 +145,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
     int todayCount = missionsAsync.maybeWhen(data: (d) => d.length, orElse: () => 0);
     int approvedCount = approvedThisWeekAsync.maybeWhen(data: (d) => d.length, orElse: () => 0);
     return Container(
-      color: Colors.white,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.childCardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.brown.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: TabBar(
         controller: _tabController,
-        labelColor: AppTheme.primary,
+        labelColor: AppTheme.childSky700,
         unselectedLabelColor: AppTheme.slate400,
-        indicatorColor: AppTheme.primary,
-        labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: AppTheme.childSky200.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        indicatorPadding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         tabs: [
           Tab(text: '오늘 할 일 ($todayCount)'),
           Tab(text: '지급된 미션 ($approvedCount)'),
@@ -163,14 +182,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
   Widget _buildTodayList(BuildContext context, WidgetRef ref, dynamic family, AsyncValue<List<MissionAssignmentModel>> missionsAsync) {
     return missionsAsync.when(
                   data: (missions) {
-                    // 스페셜(one_off) 우선 정렬
+                    // 승인 대기(pending)는 맨 아래, 그 외에서는 스페셜(one_off) 우선
                     missions.sort((a, b) {
+                      final aPending = a.status == 'pending' ? 1 : 0;
+                      final bPending = b.status == 'pending' ? 1 : 0;
+                      if (aPending != bPending) {
+                        return aPending.compareTo(bPending);
+                      }
                       final ao = (a.oneOff == true) ? 0 : 1;
                       final bo = (b.oneOff == true) ? 0 : 1;
                       return ao.compareTo(bo);
                     });
                     if (missions.isEmpty) {
                       return RefreshIndicator(
+                        color: AppTheme.childSky500,
                         onRefresh: () async {
                           ref.invalidate(myMissionsProvider);
                           if (family != null) {
@@ -185,14 +210,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                            Icon(Icons.task_alt, size: 64, color: AppTheme.slate300),
+                            const Text('✨', textAlign: TextAlign.center, style: TextStyle(fontSize: 56)),
                             const SizedBox(height: 16),
                             Text(
                               '오늘 할 미션이 없어요!',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 color: AppTheme.slate600,
                               ),
                             ),
@@ -202,6 +227,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                     }
 
                     return RefreshIndicator(
+                      color: AppTheme.childSky500,
                       onRefresh: () async {
                         ref.invalidate(myMissionsProvider);
                         if (family != null) {
@@ -214,63 +240,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                       },
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 16),
                             ...missions.map((mission) {
-                              final isOneOff = mission.oneOff == true;
-                              final isRecentlyRejected = mission.recentlyRejected == true;
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (isOneOff)
-                                    Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.amber100,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: AppTheme.amber200),
-                                      ),
-                                      child: const Text(
-                                        '오늘만 수행 가능한 미션이에요!',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.amber600,
-                                        ),
-                                      ),
-                                    ),
-                                  if (isRecentlyRejected)
-                                    Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFFFF1F2),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Color(0xFFFCA5A5)),
-                                      ),
-                                      child: const Text(
-                                        '반려되었어요. 미션을 다시 수행해서 완료해보세요!',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                  MissionCard(
-                                    title: mission.missionTitle ?? '미션',
-                                    points: mission.points,
-                                    icon: _buildMissionIcon(mission.missionIconType, color: const Color(0xFF3B82F6)),
-                                    status: mission.status,
-                                    onComplete: mission.status == 'todo'
-                                        ? () => _handleComplete(mission.id, mission.missionTitle ?? '미션')
-                                        : null,
-                                  ),
-                                ],
+                              return MissionCard(
+                                title: mission.missionTitle ?? '미션',
+                                points: mission.points,
+                                icon: _buildMissionIcon(
+                                  mission.missionIconType,
+                                  color: AppTheme.childSky600,
+                                ),
+                                status: mission.status,
+                                oneOff: mission.oneOff == true,
+                                recentlyRejected: mission.recentlyRejected == true,
+                                onComplete: mission.status == 'todo'
+                                    ? () => _handleComplete(mission.id, mission.missionTitle ?? '미션')
+                                    : null,
                               );
                             }),
                           ],
@@ -278,7 +266,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                       ),
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(color: AppTheme.childSky500),
+                  ),
                   error: (error, stack) => Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -309,6 +299,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
       data: (items) {
         if (items.isEmpty) {
           return RefreshIndicator(
+            color: AppTheme.childSky500,
             onRefresh: () async {
               ref.invalidate(myApprovedMissionsThisWeekProvider);
               await ref.read(myApprovedMissionsThisWeekProvider.future);
@@ -317,14 +308,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                Icon(Icons.verified, size: 64, color: AppTheme.slate300),
+                const Text('🏅', textAlign: TextAlign.center, style: TextStyle(fontSize: 56)),
                 const SizedBox(height: 16),
                 Text(
                   '지급된 미션이 없어요',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     color: AppTheme.slate600,
                   ),
                 ),
@@ -333,13 +324,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
           );
         }
         return RefreshIndicator(
+          color: AppTheme.childSky500,
           onRefresh: () async {
             ref.invalidate(myApprovedMissionsThisWeekProvider);
             await ref.read(myApprovedMissionsThisWeekProvider.future);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -356,7 +348,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.childSky500)),
       error: (e, _) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -377,14 +369,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
 
   Widget _buildHeader(AsyncValue<int> pointsAsync) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0F2FE).withOpacity(0.8),
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.brown.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -395,22 +388,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    '오늘도 멋지게 시작해볼까?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.slate800,
-                    ),
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '오늘의 미션',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.slate800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text('🌟', style: TextStyle(fontSize: 22)),
+                    ],
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    '오늘 할 미션을 확인해보자!',
+                    '오늘 할 일을 확인해보자!',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.slate500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.slate400,
                     ),
                   ),
                 ],
@@ -418,20 +418,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
             ),
             pointsAsync.when(
               data: (points) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppTheme.amber100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.amber200, width: 2),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFF9E6), Color(0xFFFFEFD5)],
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: const Color(0xFFFFE0A8)),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.monetization_on, size: 20, color: AppTheme.amber600),
+                    Icon(Icons.monetization_on_rounded, size: 20, color: AppTheme.amber600),
                     const SizedBox(width: 4),
                     Text(
-                      '${points.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} P',
+                      points.toString().replaceAllMapped(
+                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                        (Match m) => '${m[1]},',
+                      ),
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.amber600,
                       ),
@@ -439,12 +445,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                   ],
                 ),
               ),
-              loading: () => Container(
-                padding: const EdgeInsets.all(10),
-                child: const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              loading: () => const Padding(
+                padding: EdgeInsets.all(10),
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.childSky500),
                 ),
               ),
               error: (_, __) => const SizedBox.shrink(),
