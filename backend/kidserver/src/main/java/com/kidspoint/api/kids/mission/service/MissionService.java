@@ -13,6 +13,8 @@ import com.kidspoint.api.kids.mission.mapper.MissionLogMapper;
 import com.kidspoint.api.kids.mission.mapper.MissionMapper;
 import com.kidspoint.api.kids.point.service.PointService;
 import com.kidspoint.api.push.service.FcmPushService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class MissionService {
+
+    private static final Logger log = LoggerFactory.getLogger(MissionService.class);
 
     private final MissionMapper missionMapper;
     private final MissionAssignmentMapper missionAssignmentMapper;
@@ -210,6 +214,7 @@ public class MissionService {
 
         Mission mission = missionMapper.selectById(assignment.getMissionId());
         FamilyMember member = familyMemberMapper.selectByFamilyAndUser(assignment.getFamilyId(), assignment.getAssigneeId());
+        log.info("[Mission] complete: assignmentId={} familyId={} assigneeId={} -> pending, notify parents", assignmentId, assignment.getFamilyId(), userId);
         notifyParentsMissionSubmit(assignment.getFamilyId(), member, mission);
         return toAssignmentResponse(assignment, mission, member);
     }
@@ -614,6 +619,7 @@ public class MissionService {
 
     private void notifyParentsMissionSubmit(UUID familyId, FamilyMember childMember, Mission mission) {
         if (!fcmPushService.isFcmEnabled()) {
+            log.warn("[FCM] notifyParentsMissionSubmit skipped: Firebase not initialized (set FIREBASE_SERVICE_ACCOUNT_B64 on server)");
             return;
         }
         List<UUID> parentIds = familyMemberMapper.selectByFamilyId(familyId).stream()
@@ -621,6 +627,7 @@ public class MissionService {
             .map(FamilyMember::getUserId)
             .collect(Collectors.toList());
         if (parentIds.isEmpty()) {
+            log.warn("[FCM] notifyParentsMissionSubmit skipped: no parent role in familyId={}", familyId);
             return;
         }
         String childName = (childMember != null && childMember.getNickname() != null && !childMember.getNickname().isBlank())
@@ -634,6 +641,7 @@ public class MissionService {
 
     private void notifyChildMissionResult(UUID childUserId, boolean approved, Mission mission) {
         if (!fcmPushService.isFcmEnabled()) {
+            log.warn("[FCM] notifyChildMissionResult skipped: Firebase not initialized");
             return;
         }
         String mTitle = mission != null && mission.getTitle() != null ? mission.getTitle() : "미션";
