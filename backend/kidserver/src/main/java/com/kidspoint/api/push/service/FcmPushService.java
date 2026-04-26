@@ -1,11 +1,12 @@
 package com.kidspoint.api.push.service;
 
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.SendResponse;
 import com.kidspoint.api.push.domain.UserPushToken;
 import com.kidspoint.api.push.mapper.UserPushTokenMapper;
 import org.slf4j.Logger;
@@ -41,17 +42,24 @@ public class FcmPushService {
 
     public void sendToUser(UUID userId, String title, String body, Map<String, String> data) {
         if (!isFcmEnabled()) {
+            log.warn("[FCM] sendToUser skipped: Firebase not initialized (check FIREBASE_SERVICE_ACCOUNT_B64 on server)");
             return;
         }
         UserPushToken t = userPushTokenMapper.selectByUserId(userId);
         if (t == null || t.getFcmToken() == null || t.getFcmToken().isBlank()) {
+            log.info("[FCM] sendToUser: no FCM row/token for userId={} (app must POST /api/kids/push-tokens after login)", userId);
             return;
         }
         sendToTokens(List.of(t.getFcmToken()), title, body, data);
     }
 
     public void sendToUsers(List<UUID> userIds, String title, String body, Map<String, String> data) {
-        if (!isFcmEnabled() || userIds == null || userIds.isEmpty()) {
+        if (!isFcmEnabled()) {
+            log.warn("[FCM] sendToUsers skipped: Firebase not initialized");
+            return;
+        }
+        if (userIds == null || userIds.isEmpty()) {
+            log.info("[FCM] sendToUsers: no target user ids (e.g. no parent in family_members with role=parent?)");
             return;
         }
         List<String> tokens = new ArrayList<>();
@@ -59,8 +67,16 @@ public class FcmPushService {
             UserPushToken t = userPushTokenMapper.selectByUserId(uid);
             if (t != null && t.getFcmToken() != null && !t.getFcmToken().isBlank()) {
                 tokens.add(t.getFcmToken());
+            } else {
+                log.info("[FCM] no push token for userId={} — that user has not registered FCM (login on device + push-tokens API)", uid);
             }
         }
+        if (tokens.isEmpty()) {
+            log.warn("[FCM] sendToUsers: 0 FCM token(s) for {} parent id(s), type={} — nothing sent",
+                userIds.size(), data != null ? data.get(DATA_TYPE) : "?");
+            return;
+        }
+        log.info("[FCM] sendToUsers: {} token(s) for type={}", tokens.size(), data != null ? data.get(DATA_TYPE) : "?");
         sendToTokens(tokens, title, body, data);
     }
 
@@ -97,7 +113,10 @@ public class FcmPushService {
             for (String token : batch) {
                 Message.Builder b = Message.builder()
                     .setToken(token)
-                    .setNotification(Notification.builder().setTitle(title).setBody(body).build());
+                    .setNotification(Notification.builder().setTitle(title).setBody(body).build())
+                    .setAndroidConfig(AndroidConfig.builder()
+                        .setPriority(AndroidConfig.Priority.HIGH)
+                        .build());
                 if (data != null) {
                     b.putAllData(data);
                 }
@@ -107,6 +126,14 @@ public class FcmPushService {
                 BatchResponse response = FirebaseMessaging.getInstance().sendEach(messages);
                 if (response.getFailureCount() > 0) {
                     log.warn("[FCM] Partial failure: {}/{}", response.getFailureCount(), response.getResponses().size());
+                    for (int j = 0; j < response.getResponses().size(); j++) {
+                        SendResponse sr = response.getResponses().get(j);
+                        if (!sr.isSuccessful() && sr.getException() != null) {
+                            log.warn("[FCM] send[{}] error: {}", j, sr.getException().getMessagingErrorCode() + " " + sr.getException().getMessage());
+                        }
+                    }
+                } else {
+                    log.info("[FCM] sendEach ok: {} message(s)", response.getSuccessCount());
                 }
             } catch (Exception e) {
                 log.warn("[FCM] sendEach: {}", e.getMessage());
