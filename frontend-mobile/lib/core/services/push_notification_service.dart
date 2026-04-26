@@ -126,15 +126,22 @@ class PushNotificationService {
     try {
       final client = ApiClient();
       final platform = Platform.isIOS ? 'ios' : (Platform.isAndroid ? 'android' : 'other');
-      await client.post(
+      final res = await client.post(
         '/kids/push-tokens',
         data: {
           'fcmToken': token,
           'platform': platform,
         },
       );
-      if (kDebugMode) {
-        debugPrint('[FCM] token registered on server');
+      if (res.statusCode != null && res.statusCode! >= 200 && res.statusCode! < 300) {
+        if (kDebugMode) {
+          debugPrint('[FCM] token registered on server (HTTP ${res.statusCode})');
+        }
+      } else {
+        debugPrint(
+          '[FCM] push-tokens not accepted: HTTP ${res.statusCode} — '
+          '보통 세션·Bearer 혼용 시 잘못된 사용자에 등록됐을 수 있음. 백엔드 Bearer 우선 정책을 확인하세요.',
+        );
       }
     } catch (e) {
       debugPrint('[FCM] register token failed: $e');

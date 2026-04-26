@@ -156,6 +156,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         ApiClient.cachedBearerToken = token;
         state = state.copyWith(user: cached, bootstrapping: false);
         _ref.invalidate(myFamiliesProvider);
+        unawaited(PushNotificationService.syncTokenToBackend());
         await _initializeFamily(null);
       } else {
         await _clearSessionPrefs();

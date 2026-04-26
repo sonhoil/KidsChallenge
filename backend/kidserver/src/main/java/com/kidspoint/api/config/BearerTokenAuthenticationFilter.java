@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -44,49 +43,30 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         
-        // 이미 인증된 경우(세션 기반 인증 등) Bearer Token 처리를 건너뛰기
-        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
-        if (existingAuth != null && existingAuth.isAuthenticated() && !(existingAuth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
-            logger.debug("[BearerTokenFilter] Already authenticated: {}", existingAuth.getName());
-            filterChain.doFilter(request, response);
-            return;
-        }
-        
-        // 주의: HttpSession 이 존재한다고 해서 여기서 return 하면 안 됨.
-        // 만료·무효한 SESSION 쿠키로 세션 객체가 남아 있어도 SecurityContext 가 비어 있을 수 있으며,
-        // 이 경우 Authorization: Bearer(저장된 사용자 UUID)가 무시되어 모바일 앱 재실행 시 /me 가 401이 된다.
-        // 유효한 서버 세션이 있으면 SecurityContextHolderFilter 가 이미 인증을 채웠으므로 위 분기에서 처리된다.
-        
+        // 모바일은 Cookie(SESSION) + Authorization: Bearer(사용자 UUID) 를 함께 보낸다.
+        // 세션이 먼저 복원되면 기존 로직은 "이미 인증됨"으로 Bearer 를 무시했는데, 그때 토큰을 등록·요청이
+        // 세션에 묶인 다른 사용자(예: 이전에 로그인한 아이)로 처리되어 FCM 이 부모가 아닌 쪽에 저장될 수 있다.
+        // Authorization: Bearer 가 있으면 항상 그 UUID 를 현재 인증으로 사용한다.
         String authHeader = request.getHeader("Authorization");
         logger.debug("[BearerTokenFilter] Authorization header: {}", authHeader != null ? "present" : "absent");
-        
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // "Bearer " 제거
-            
+            String token = authHeader.substring(7);
             try {
-                // 토큰을 UUID로 파싱 (현재는 단순히 UUID 문자열을 사용)
-                // TODO: 실제 JWT 토큰을 사용하는 경우 JWT 파싱 로직으로 교체
                 UUID userId = UUID.fromString(token);
-                
-                // 인증 객체 생성
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    userId.toString(), // principal
-                    null, // credentials
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")) // authorities
+                    userId.toString(),
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
                 );
-                
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                
-                // SecurityContext에 인증 정보 설정
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 logger.debug("[BearerTokenFilter] Bearer token authenticated: {}", userId);
-                
             } catch (IllegalArgumentException e) {
-                // 토큰이 유효한 UUID가 아닌 경우 무시 (다른 인증 방식 시도)
-                logger.debug("[BearerTokenFilter] Invalid Bearer token format: " + e.getMessage());
+                logger.debug("[BearerTokenFilter] Invalid Bearer token format: {}", e.getMessage());
             }
         }
-        
+
         filterChain.doFilter(request, response);
     }
 }
