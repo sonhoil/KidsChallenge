@@ -188,18 +188,24 @@ public class MissionService {
     }
 
     public MissionAssignmentResponse completeMission(UUID userId, UUID assignmentId) {
+        System.out.println("[MissionService] completeMission start userId=" + userId + " assignmentId=" + assignmentId);
         MissionAssignment assignment = missionAssignmentMapper.selectById(assignmentId);
         if (assignment == null) {
+            System.out.println("[MissionService] completeMission: assignment not found");
             throw new IllegalArgumentException("Mission assignment not found");
         }
+        System.out.println("[MissionService] completeMission: loaded status=" + assignment.getStatus()
+            + " assigneeId=" + assignment.getAssigneeId() + " familyId=" + assignment.getFamilyId());
 
         // 본인만 완료 가능
         if (!assignment.getAssigneeId().equals(userId)) {
+            System.out.println("[MissionService] completeMission: assignee mismatch (only assignee can complete)");
             throw new IllegalStateException("Only the assignee can complete this mission");
         }
 
         // 상태 확인
         if (assignment.getStatus() != MissionAssignment.MissionStatus.todo) {
+            System.out.println("[MissionService] completeMission: not todo (current=" + assignment.getStatus() + ")");
             throw new IllegalStateException("Mission is not in todo status");
         }
 
@@ -208,14 +214,21 @@ public class MissionService {
         assignment.setStatus(MissionAssignment.MissionStatus.pending);
         assignment.setUpdatedAt(Instant.now());
         missionAssignmentMapper.update(assignment);
+        System.out.println("[MissionService] completeMission: DB updated todo -> pending assignmentId=" + assignmentId);
 
         // 로그 기록
         logStatusChange(assignmentId, oldStatus, MissionAssignment.MissionStatus.pending, userId, null);
+        System.out.println("[MissionService] completeMission: mission_log inserted");
 
         Mission mission = missionMapper.selectById(assignment.getMissionId());
         FamilyMember member = familyMemberMapper.selectByFamilyAndUser(assignment.getFamilyId(), assignment.getAssigneeId());
-        log.info("[Mission] complete: assignmentId={} familyId={} assigneeId={} -> pending, notify parents", assignmentId, assignment.getFamilyId(), userId);
+        String missionTitle = mission != null ? mission.getTitle() : null;
+        System.out.println("[MissionService] completeMission: mission=" + (mission != null ? mission.getId() : "null")
+            + " title=" + missionTitle);
+        System.out.println("[Mission] complete: assignmentId=" + assignmentId + " familyId=" + assignment.getFamilyId()
+            + " assigneeId=" + userId + " -> pending, notify parents");
         notifyParentsMissionSubmit(assignment.getFamilyId(), member, mission);
+        System.out.println("[MissionService] completeMission: notifyParentsMissionSubmit done, building response");
         return toAssignmentResponse(assignment, mission, member);
     }
 
@@ -618,7 +631,10 @@ public class MissionService {
     }
 
     private void notifyParentsMissionSubmit(UUID familyId, FamilyMember childMember, Mission mission) {
+        System.out.println("[MissionService] notifyParentsMissionSubmit: familyId=" + familyId
+            + " fcmEnabled=" + fcmPushService.isFcmEnabled());
         if (!fcmPushService.isFcmEnabled()) {
+            System.out.println("[MissionService] [FCM] notifyParentsMissionSubmit SKIPPED: Firebase not initialized (set FIREBASE_SERVICE_ACCOUNT_B64 on server)");
             log.warn("[FCM] notifyParentsMissionSubmit skipped: Firebase not initialized (set FIREBASE_SERVICE_ACCOUNT_B64 on server)");
             return;
         }
@@ -626,13 +642,16 @@ public class MissionService {
             .filter(m -> m.getRole() == FamilyMember.FamilyRole.parent)
             .map(FamilyMember::getUserId)
             .collect(Collectors.toList());
+        System.out.println("[MissionService] notifyParentsMissionSubmit: parent userIds=" + parentIds);
         if (parentIds.isEmpty()) {
+            System.out.println("[MissionService] [FCM] notifyParentsMissionSubmit SKIPPED: no parent role in familyId=" + familyId);
             log.warn("[FCM] notifyParentsMissionSubmit skipped: no parent role in familyId={}", familyId);
             return;
         }
         String childName = (childMember != null && childMember.getNickname() != null && !childMember.getNickname().isBlank())
             ? childMember.getNickname() : "아이";
         String mTitle = mission != null && mission.getTitle() != null ? mission.getTitle() : "미션";
+        System.out.println("[MissionService] [FCM] sendToUsers parent count=" + parentIds.size() + " type=MISSION_SUBMIT child=" + childName);
         Map<String, String> data = new HashMap<>();
         data.put(FcmPushService.DATA_TYPE, FcmPushService.TYPE_MISSION_SUBMIT);
         fcmPushService.sendToUsers(parentIds, "미션 완료 요청",

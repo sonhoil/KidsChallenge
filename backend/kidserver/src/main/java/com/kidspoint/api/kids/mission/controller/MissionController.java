@@ -145,16 +145,22 @@ public class MissionController extends ApiControllerBase {
     @PostMapping("/{assignmentId}/complete")
     public ResponseEntity<ApiResponse<MissionAssignmentResponse>> completeMission(
             @PathVariable UUID assignmentId) {
+        System.out.println("[MissionController] POST /api/kids/missions/" + assignmentId + "/complete");
         UUID userId = getCurrentUserId();
+        System.out.println("[MissionController] completeMission: current userId=" + userId);
         if (userId == null) {
+            System.out.println("[MissionController] completeMission: not authenticated");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Not authenticated"));
         }
 
         try {
             MissionAssignmentResponse response = missionService.completeMission(userId, assignmentId);
+            System.out.println("[MissionController] completeMission: ok assignmentId=" + assignmentId
+                + " newStatus=" + (response.getStatus() != null ? response.getStatus() : "?"));
             return ResponseEntity.ok(ApiResponse.ok(response, "Mission completed successfully"));
         } catch (IllegalStateException | IllegalArgumentException e) {
+            System.out.println("[MissionController] completeMission: failed: " + e.getClass().getSimpleName() + " " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(e.getMessage()));
         }
