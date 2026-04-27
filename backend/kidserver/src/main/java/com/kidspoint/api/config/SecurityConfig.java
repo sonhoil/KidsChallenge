@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/invite/**").permitAll()
                 .requestMatchers("/api/uploads/items/**").permitAll() // 업로드된 이미지는 인증 없이 접근 가능
                 .requestMatchers("/api/kids/**").permitAll() // 개발 환경: Kids API 임시로 인증 불필요 (디버깅용)
+                .requestMatchers("/static/legal/**").permitAll() // 스토어용 고객지원·개인정보처리방침 정적 페이지
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
