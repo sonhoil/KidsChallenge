@@ -77,14 +77,23 @@ class ApiClient {
           // 웹에서는 브라우저가 자동으로 쿠키를 저장함
           if (!kIsWeb) {
             try {
-              final cookies = response.headers.value('set-cookie');
-              print('[API] Set-Cookie header: $cookies');
-              if (cookies != null) {
-                final sessionMatch = RegExp(r'SESSION=([^;]+)').firstMatch(cookies);
-                if (sessionMatch != null) {
+              // Dio는 여러 Set-Cookie 를 map['set-cookie'] 리스트로 줄 수 있다. 첫 줄만 보다 보면 SESSION 을 놓칠 수 있음.
+              final cookieHeaderList = response.headers.map['set-cookie'];
+              print('[API] Set-Cookie headers: $cookieHeaderList');
+              if (cookieHeaderList != null) {
+                String? sid;
+                for (final cookieLine in cookieHeaderList) {
+                  final m =
+                      RegExp(r'SESSION=([^;]+)').firstMatch(cookieLine);
+                  if (m != null) {
+                    sid = m.group(1);
+                    break;
+                  }
+                }
+                if (sid != null && sid.isNotEmpty) {
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString(_sessionKey, sessionMatch.group(1)!);
-                  print('[API] Saved session ID for mobile: ${sessionMatch.group(1)}');
+                  await prefs.setString(_sessionKey, sid);
+                  print('[API] Saved session ID for mobile: $sid');
                 }
               }
             } catch (e) {

@@ -2,9 +2,11 @@ package com.kidspoint.api.auth.service;
 
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +17,8 @@ import java.util.Date;
 import java.util.Objects;
 
 /**
- * Sign in with Apple identity token (JWT, ES256) 검증.
+ * Sign in with Apple identity token 검증.
+ * Apple JWKS 에는 EC(P-256, ES256) 및 RSA(RS256) 키가 섞여 있으며, 클라이언트 토큰 헤더 알고리즘과 맞는 공개키로 검증한다.
  * aud = iOS 번들 ID (예: com.kidspoint.kidsChallenge)
  */
 @Component
@@ -41,8 +44,15 @@ public class AppleIdentityTokenVerifier {
         if (jwk == null) {
             throw new IllegalArgumentException("Apple JWK not found for kid=" + kid);
         }
-        ECKey ecKey = (ECKey) jwk;
-        JWSVerifier verifier = new ECDSAVerifier(ecKey.toECPublicKey());
+        JWSVerifier verifier;
+        if (jwk instanceof RSAKey) {
+            verifier = new RSASSAVerifier(((RSAKey) jwk).toRSAPublicKey());
+        } else if (jwk instanceof ECKey) {
+            verifier = new ECDSAVerifier(((ECKey) jwk).toECPublicKey());
+        } else {
+            throw new IllegalArgumentException(
+                "Unsupported Apple JWK type (expected RSA or EC), got=" + jwk.getKeyType());
+        }
         if (!signedJWT.verify(verifier)) {
             throw new IllegalArgumentException("Apple identity token signature invalid");
         }

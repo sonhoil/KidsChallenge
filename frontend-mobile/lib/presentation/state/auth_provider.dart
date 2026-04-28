@@ -53,12 +53,14 @@ class AuthState {
   
   AuthState copyWith({
     UserModel? user,
+    /// true 이면 [user]를 강제로 null로 초기화(소셜 로그인 시작 시 이전 사용자 제거 등).
+    bool clearUser = false,
     bool? isLoading,
     String? error,
     bool? bootstrapping,
   }) {
     return AuthState(
-      user: user ?? this.user,
+      user: clearUser ? null : (user ?? this.user),
       isLoading: isLoading ?? this.isLoading,
       error: error,
       bootstrapping: bootstrapping ?? this.bootstrapping,
@@ -169,7 +171,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String username, String password, {String? inviteCode, String? memberId}) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(clearUser: true, isLoading: true, error: null);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
@@ -226,7 +228,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> loginWithKakao({String? inviteCode, String? memberId}) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(clearUser: true, isLoading: true, error: null);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
@@ -261,7 +263,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> loginWithGoogle({String? inviteCode, String? memberId}) async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(clearUser: true, isLoading: true, error: null);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
@@ -366,7 +368,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: 'Sign in with Apple은 iOS에서만 사용할 수 있어요.', bootstrapping: false);
       return false;
     }
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(clearUser: true, isLoading: true, error: null);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_id');
@@ -424,6 +426,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final currentFamilyProvider = StateProvider<FamilyModel?>((ref) => null);
 
 final myFamiliesProvider = FutureProvider<List<FamilyModel>>((ref) async {
+  /// 라우터·트리 전역에서 구독됨 → 비로그인 상태에서 호출하면 Bearer 없이 401만 쌓임.
+  final auth = ref.watch(authStateProvider);
+  if (!auth.isAuthenticated) {
+    return [];
+  }
+
   final repo = ref.read(familyRepositoryProvider);
   try {
     return await repo.getMyFamilies();
