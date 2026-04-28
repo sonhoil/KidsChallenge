@@ -49,8 +49,16 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // 개발 환경: CSRF 완전 비활성화
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/api/**").permitAll() // OPTIONS 요청은 인증 불필요
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/auth/test/**").permitAll() // 테스트용 엔드포인트
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/logout",
+                    "/api/auth/kakao",
+                    "/api/auth/kakao/**",
+                    "/api/auth/google/token",
+                    "/api/auth/apple/token",
+                    "/api/auth/test/**"
+                ).permitAll()
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/invite/**").permitAll()
                 .requestMatchers("/api/uploads/items/**").permitAll() // 업로드된 이미지는 인증 없이 접근 가능

@@ -163,4 +163,28 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  Future<UserModel> loginWithApple(String identityToken) async {
+    final response = await _apiClient.post(
+      AppConfig.authAppleToken,
+      data: {'identityToken': identityToken},
+    );
+    if (response.data is Map) {
+      final data = response.data as Map<String, dynamic>;
+      if (data['success'] == true && data['data'] != null) {
+        return UserModel.fromJson(data['data'] as Map<String, dynamic>);
+      }
+    }
+    throw Exception(response.data is Map ? (response.data['message'] ?? 'Apple login failed') : 'Apple login failed');
+  }
+
+  Future<void> deleteAccount() async {
+    final response = await _apiClient.delete(AppConfig.authAccount);
+    final code = response.statusCode ?? 0;
+    if (code >= 200 && code < 300) {
+      return;
+    }
+    throw Exception(response.data is Map ? (response.data['message'] ?? '계정 삭제 실패') : '계정 삭제 실패');
+  }
 }
+

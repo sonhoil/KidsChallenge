@@ -14,6 +14,8 @@ class AppConfig {
   static const String authMe = '/auth/me';
   static const String authKakaoToken = '/auth/kakao/token';
   static const String authGoogleToken = '/auth/google/token';
+  static const String authAppleToken = '/auth/apple/token';
+  static const String authAccount = '/auth/account';
 
   /// Google Sign-In **iOS** 전용 클라이언트 ID (`xxx.apps.googleusercontent.com`).
   /// [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth 2.0 클라이언트 ID →

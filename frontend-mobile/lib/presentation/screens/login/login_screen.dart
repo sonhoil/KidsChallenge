@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kids_challenge/core/config/app_config.dart';
 import 'package:kids_challenge/core/theme/app_theme.dart';
+import 'package:kids_challenge/presentation/legal/app_terms_text.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
 import 'package:kids_challenge/presentation/state/pending_invite_provider.dart';
 
@@ -126,6 +129,93 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleAppleLogin() async {
+    setState(() => _isLoading = true);
+    final success = await ref.read(authStateProvider.notifier).loginWithApple(
+          inviteCode: _effectiveInviteCode(),
+          memberId: _effectiveMemberId(),
+        );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (success) {
+      _navigateAfterLogin();
+    } else {
+      final error = ref.read(authStateProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error ?? 'Apple 로그인에 실패했습니다'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
+  }
+
+  void _showTermsDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 520,
+              maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          AppTermsText.title,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            AppTermsText.fullText,
+                            style: TextStyle(fontSize: 13, height: 1.5, color: AppTheme.slate800),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            AppTermsText.privacyNotice(AppConfig.apiOrigin),
+                            style: const TextStyle(fontSize: 12, color: AppTheme.slate500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _handleGoogleLogin() async {
     setState(() => _isLoading = true);
     
@@ -183,12 +273,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
+        child: Scrollbar(
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.sizeOf(context).height -
+                    MediaQuery.paddingOf(context).vertical -
+                    32,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+              const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: Image.asset(
@@ -291,6 +390,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+              if (!kIsWeb && Theme.of(context).platform == TargetPlatform.iOS) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed:
+                        _isLoading || authState.isLoading ? null : _handleAppleLogin,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.black,
+                      side: BorderSide.none,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: _isLoading || authState.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.apple, size: 26, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Apple로 시작하기',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -354,16 +495,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 28),
+              TextButton.icon(
+                onPressed: _showTermsDialog,
+                icon: const Icon(Icons.article_outlined, size: 18, color: AppTheme.primary),
+                label: const Text(
+                  '서비스 이용약관 및 개인정보 안내 보기',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 8),
               const Text(
-                '가입 시 서비스 이용약관 및\n개인정보 처리방침에 동의하게 됩니다.',
+                '가입·로그인 시 위 내용에 동의한 것으로 봅니다.',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppTheme.slate400,
                 ),
                 textAlign: TextAlign.center,
               ),
-            ],
+              const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ),
       ),

@@ -27,6 +27,9 @@ const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
 class PushNotificationService {
   static bool _initialized = false;
 
+  /// 포그라운드로 표시한 로컬 알림을 탭했을 때 [PushLifecycleRefresher]가 등록
+  static void Function()? onLocalNotificationTapped;
+
   static Future<void> init() async {
     if (kIsWeb) return;
     if (_initialized) return;
@@ -78,7 +81,12 @@ class PushNotificationService {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings();
     const init = InitializationSettings(android: android, iOS: ios);
-    await _localNotifications.initialize(settings: init);
+    await _localNotifications.initialize(
+      settings: init,
+      onDidReceiveNotificationResponse: (NotificationResponse details) {
+        onLocalNotificationTapped?.call();
+      },
+    );
 
     if (Platform.isAndroid) {
       await _localNotifications

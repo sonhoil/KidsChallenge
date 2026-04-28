@@ -345,6 +345,15 @@ class ParentSettingsScreen extends ConsumerWidget {
           ),
           const Divider(height: 1),
           _buildActionItem(
+            icon: Icons.delete_forever_outlined,
+            iconColor: AppTheme.error,
+            iconBg: const Color(0xFFFEE2E2),
+            label: '계정 및 데이터 삭제',
+            subtitle: '서비스에서 계정을 영구 삭제해요 (되돌릴 수 없어요)',
+            onTap: () => _confirmDeleteAccount(context, ref),
+          ),
+          const Divider(height: 1),
+          _buildActionItem(
             icon: Icons.logout,
             iconColor: AppTheme.error,
             iconBg: const Color(0xFFFEE2E2),
@@ -515,6 +524,48 @@ class ParentSettingsScreen extends ConsumerWidget {
           backgroundColor: AppTheme.error,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(left: 16, right: 16, bottom: 88),
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('계정 삭제'),
+        content: const SingleChildScrollView(
+          child: Text(
+            '가족·미션·포인트 등 연결된 데이터가 삭제되며 복구할 수 없습니다.\n\n'
+            '계속하시겠어요?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              '삭제',
+              style: TextStyle(color: AppTheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final ok = await ref.read(authStateProvider.notifier).deleteAccount();
+    if (!context.mounted) return;
+    if (ok) {
+      context.go('/login');
+    } else {
+      final err = ref.read(authStateProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err ?? '계정 삭제에 실패했습니다'),
+          backgroundColor: AppTheme.error,
         ),
       );
     }

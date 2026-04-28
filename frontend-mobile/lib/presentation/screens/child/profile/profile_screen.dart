@@ -461,6 +461,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
           const Divider(height: 1),
+          _buildMenuItem(
+            icon: Icons.delete_forever_outlined,
+            iconColor: AppTheme.error,
+            iconBg: const Color(0xFFFEE2E2),
+            label: '계정 및 데이터 삭제',
+            onTap: () => _confirmDeleteAccount(context),
+          ),
+          const Divider(height: 1),
           // 앱 설정 메뉴 제거
           _buildMenuItem(
             icon: Icons.logout,
@@ -511,6 +519,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('계정 삭제'),
+        content: const SingleChildScrollView(
+          child: Text(
+            '가족·미션·포인트 등 연결된 데이터가 삭제되며 복구할 수 없습니다.\n\n계속하시겠어요?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              '삭제',
+              style: TextStyle(color: AppTheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final ok = await ref.read(authStateProvider.notifier).deleteAccount();
+    if (!mounted) return;
+    if (ok) {
+      context.go('/login');
+    } else {
+      final err = ref.read(authStateProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err ?? '계정 삭제에 실패했습니다'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmLogout(BuildContext context) async {

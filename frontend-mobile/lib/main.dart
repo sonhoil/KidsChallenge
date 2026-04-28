@@ -24,6 +24,7 @@ import 'package:kids_challenge/data/models/mission_model.dart';
 import 'package:kids_challenge/presentation/screens/create_family_screen.dart';
 import 'package:kids_challenge/presentation/state/auth_provider.dart';
 import 'package:kids_challenge/presentation/widgets/invite_link_listener.dart';
+import 'package:kids_challenge/presentation/widgets/push_lifecycle_refresher.dart';
 import 'package:kids_challenge/data/datasources/api_client.dart';
 import 'package:kids_challenge/core/services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,7 +39,9 @@ Future<void> main() async {
   }
   runApp(
     const ProviderScope(
-      child: KidsChallengeApp(),
+      child: PushLifecycleRefresher(
+        child: KidsChallengeApp(),
+      ),
     ),
   );
 }

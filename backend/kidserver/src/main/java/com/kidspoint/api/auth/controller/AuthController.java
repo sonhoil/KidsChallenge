@@ -8,6 +8,8 @@ import com.kidspoint.api.auth.dto.UserResponse;
 import com.kidspoint.api.auth.service.AuthService;
 import com.kidspoint.api.auth.service.KakaoAuthService;
 import com.kidspoint.api.auth.service.GoogleAuthService;
+import com.kidspoint.api.auth.service.AppleAuthService;
+import com.kidspoint.api.auth.service.AccountDeletionService;
 import com.kidspoint.api.controller.base.ApiControllerBase;
 import com.kidspoint.api.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,13 +42,23 @@ public class AuthController extends ApiControllerBase {
         private final AuthenticationManager authenticationManager;
         private final KakaoAuthService kakaoAuthService;
         private final GoogleAuthService googleAuthService;
+        private final AppleAuthService appleAuthService;
+        private final AccountDeletionService accountDeletionService;
 
         @Autowired
-        public AuthController(AuthService authService, AuthenticationManager authenticationManager, KakaoAuthService kakaoAuthService, GoogleAuthService googleAuthService) {
+        public AuthController(
+                AuthService authService,
+                AuthenticationManager authenticationManager,
+                KakaoAuthService kakaoAuthService,
+                GoogleAuthService googleAuthService,
+                AppleAuthService appleAuthService,
+                AccountDeletionService accountDeletionService) {
             this.authService = authService;
             this.authenticationManager = authenticationManager;
             this.kakaoAuthService = kakaoAuthService;
             this.googleAuthService = googleAuthService;
+            this.appleAuthService = appleAuthService;
+            this.accountDeletionService = accountDeletionService;
         }
 
     @PostMapping("/register")
@@ -421,5 +433,72 @@ public class AuthController extends ApiControllerBase {
                 ApiResponse<UserResponse> errorResponse = ApiResponse.error("구글 로그인 실패: " + e.getMessage());
                 return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse));
             });
+    }
+
+    /**
+     * Sign in with Apple (iOS). identity_token은 클라이언트에서 받은 문자열 JWT.
+     */
+    @PostMapping("/apple/token")
+    public ResponseEntity<ApiResponse<UserResponse>> appleTokenLogin(
+            @RequestBody java.util.Map<String, String> requestBody,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        String identityToken = requestBody.get("identityToken");
+        if (identityToken == null || identityToken.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error("identityToken is required"));
+        }
+        try {
+            com.kidspoint.api.auth.domain.User user = appleAuthService.loginOrRegister(identityToken);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getId().toString(),
+                null,
+                java.util.Collections.singletonList(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER")));
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(authentication);
+            SecurityContextHolder.setContext(securityContext);
+            jakarta.servlet.http.HttpSession session = httpRequest.getSession(true);
+            SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+            securityContextRepository.saveContext(securityContext, httpRequest, httpResponse);
+            String sessionId = session.getId();
+            httpResponse.addHeader("Set-Cookie",
+                String.format("SESSION=%s; Path=/; HttpOnly; SameSite=Lax", sessionId));
+            UserResponse userResponse = new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getNickname());
+            userResponse.setAuthType(user.getAuthType());
+            return ResponseEntity.ok(ApiResponse.ok(userResponse, "Apple 로그인 성공"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Apple 로그인 실패: " + e.getMessage()));
+        }
+    }
+
+    /** 계정 영구 삭제 (Apple 스토어 5.1.1 대응) */
+    @DeleteMapping("/account")
+    public ResponseEntity<ApiResponse<Void>> deleteMyAccount(HttpServletRequest request, HttpServletResponse response) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Not authenticated"));
+        }
+        UUID userId;
+        try {
+            userId = UUID.fromString(auth.getName());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid user"));
+        }
+        try {
+            accountDeletionService.deleteKidsUserAndAccount(userId);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("계정 삭제 실패: " + e.getMessage()));
+        }
+        new SecurityContextLogoutHandler().logout(request, response, auth);
+        jakarta.servlet.http.HttpSession sess = request.getSession(false);
+        if (sess != null) {
+            sess.invalidate();
+        }
+        return ResponseEntity.ok(ApiResponse.ok(null, "계정이 삭제되었습니다"));
     }
 }

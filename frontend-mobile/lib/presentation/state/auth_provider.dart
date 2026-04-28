@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
+import 'package:flutter/material.dart' show TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/datasources/api_client.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -351,6 +354,65 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final updated = await _authRepository.updateNickname(newNickname);
       await _persistSession(updated);
       state = state.copyWith(user: updated);
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> loginWithApple({String? inviteCode, String? memberId}) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      state = state.copyWith(isLoading: false, error: 'Sign in with Apple은 iOS에서만 사용할 수 있어요.', bootstrapping: false);
+      return false;
+    }
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('session_id');
+      await prefs.remove('auth_token');
+      await prefs.remove(_cachedUserJsonKey);
+      ApiClient.cachedBearerToken = null;
+      _ref.read(currentFamilyProvider.notifier).state = null;
+      _ref.invalidate(myFamiliesProvider);
+
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      final token = credential.identityToken;
+      if (token == null || token.isEmpty) {
+        state = state.copyWith(isLoading: false, error: 'Apple 로그인 정보를 받지 못했습니다.', bootstrapping: false);
+        return false;
+      }
+
+      final user = await _authRepository.loginWithApple(token);
+      await _persistSession(user);
+      state = state.copyWith(user: user, isLoading: false, bootstrapping: false);
+      await _initializeFamily(inviteCode, memberId: memberId);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString(), bootstrapping: false);
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      await _authRepository.deleteAccount();
+      await _clearSessionPrefs();
+      try {
+        await KakaoAuthService.logout();
+      } catch (_) {}
+      try {
+        await GoogleAuthService.signOut();
+      } catch (_) {}
+      _ref.read(currentFamilyProvider.notifier).state = null;
+      _ref.invalidate(myFamiliesProvider);
+      clearPendingInviteForRef(_ref);
+      state = AuthState(bootstrapping: false);
       return true;
     } catch (e) {
       state = state.copyWith(error: e.toString());
