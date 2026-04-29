@@ -489,7 +489,9 @@ public class AuthController extends ApiControllerBase {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Invalid user"));
         }
         try {
+            accountDeletionService.bestEffortDeleteOrganizationMembers(userId);
             accountDeletionService.deleteKidsUserAndAccount(userId);
+            accountDeletionService.bestEffortDeleteSpringSessions(userId.toString());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("계정 삭제 실패: " + e.getMessage()));
