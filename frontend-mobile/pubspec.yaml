@@ -1,7 +1,7 @@
 name: kids_challenge
 description: 아이들에게 미션을 부여하고 리워드를 주는 앱
 publish_to: 'none'
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
